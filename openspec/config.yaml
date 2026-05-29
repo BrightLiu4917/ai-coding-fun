@@ -120,6 +120,13 @@ rules:
       - 影响范围
       - 风险说明
       - 待确认问题
+    pending_question_required_fields:
+      - 需要确认
+      - 建议方案
+      - 推荐原因
+      - 影响范围
+      - 可选方案
+      - 默认处理
     forbidden:
       - 英文章节标题
       - 英文业务描述
@@ -159,6 +166,13 @@ rules:
       - 数据校验规则
       - 日志说明
       - 待确认问题
+    pending_question_required_fields:
+      - 需要确认
+      - 建议方案
+      - 推荐原因
+      - 影响范围
+      - 可选方案
+      - 默认处理
     forbidden:
       - 英文标题
       - 英文业务说明
