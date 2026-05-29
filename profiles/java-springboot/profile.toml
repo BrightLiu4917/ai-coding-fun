@@ -1,0 +1,18 @@
+name = "java-springboot"
+description = "面向 Java / Spring Boot 后端项目，包含 OpenSpec、Java 后端、DBA、API、安全、测试、发布和通用 CRUD 预览脚手架。"
+items = [
+  "AGENTS.md",
+  "CODEX_TASK_TEMPLATE.md",
+  "README.md",
+  "CONTEXT.md",
+  "CONTEXT-MAP.md",
+  "openspec",
+  "docs",
+  "agents",
+  "tools/codegen/java-springboot-crud-adapters/README.md",
+  "tools/codegen/java-springboot-crud-adapters/generic",
+  "scripts",
+  "templates",
+  "profiles",
+  "examples/springboot-mybatis"
+]

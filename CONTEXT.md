@@ -33,19 +33,19 @@ _避免_: 需要区分职责时只说 user。
 _避免_: 用 process 泛称会影响责任边界的工作流。
 
 **Contract**:
-必须保持兼容的约定，包括 API、字段、响应结构、脚本参数、profile 格式和 skill 发现结构。
+必须保持兼容的约定，包括 API、字段、响应结构、脚本参数、profile 格式和 agent 发现结构。
 _避免_: 把兼容约束只写成口头说明。
 
-**Skill**:
-位于 `.codex/skills/<skill-name>/SKILL.md` 的专项执行规则。skill 负责角色化执行，不替代 OpenSpec 事实源。
-_避免_: 一个 skill 同时负责多个语言、框架或流程阶段。
+**Agent**:
+位于 `agents/agent-<name>.md` 的专项执行规则。agent 负责角色化执行，不替代 OpenSpec 事实源。
+_避免_: 一个 agent 同时负责多个语言、框架或流程阶段。
 
-**Skill Route**:
-根据任务类型选择 skill 的规则，包括顺序、并行、循环、回退和冲突处理，事实源为 `docs/SKILL_ROUTING.md`。
+**Agent Route**:
+根据任务类型选择 agent 的规则，包括顺序、并行、循环、回退和冲突处理，事实源为 `docs/AGENT_ROUTING.md`。
 _避免_: 在多个文档里维护互相冲突的路由规则。
 
 **Codegen Adapter**:
-面向特定项目约定的代码生成适配器。Java Spring Boot CRUD 生成必须先由 `codegen-java-springboot-crud` 识别 adapter，再进入具体 adapter 或经确认转入手写实现。
+面向特定项目约定的代码生成适配器。Java Spring Boot CRUD 生成必须先由 `agent-codegen` 识别 adapter，再进入具体 adapter 或经确认转入手写实现。
 _避免_: 把某个项目专用脚手架描述成通用脚手架。
 
 **Generic Adapter**:
@@ -75,9 +75,9 @@ _避免_: 用“看起来没问题”替代可定位、可复现的审查结论�
 - **Archive** 把已完成并确认的 **Change** 沉淀为 **Spec**。
 - 一个 **Capability** 通常包含一个或多个 **Workflow**。
 - 一个 **Workflow** 由一个或多个 **Actor** 执行。
-- **Contract** 连接脚本、文档、skill、API、前端、后端和外部系统。
-- **Skill Route** 决定哪些 **Skill** 参与，以及它们是否可并行。
-- **Codegen Adapter** 是一种特殊 **Skill Route** 决策，先做 **Adapter Confirmation**，再进入 **Generic Adapter**、**Gupo Adapter** 或手写实现路径。
+- **Contract** 连接脚本、文档、agent、API、前端、后端和外部系统。
+- **Agent Route** 决定哪些 **Agent** 参与，以及它们是否可并行。
+- **Codegen Adapter** 是一种特殊 **Agent Route** 决策，先做 **Adapter Confirmation**，再进入 **Generic Adapter**、**Gupo Adapter** 或手写实现路径。
 - **Profile** 决定安装脚本复制哪些控制系统资产。
 - **Review Gate** 在交付前检查 OpenSpec、代码、数据、安全、性能和验证证据是否一致。
 
@@ -86,7 +86,7 @@ _避免_: 用“看起来没问题”替代可定位、可复现的审查结论�
 > **工程师:** "这次只是补安装脚本和 profile，要不要进 OpenSpec？"
 > **Codex:** "会新增脚本和目录结构，属于非简单任务。先创建 **Change**，确认范围不涉及 DB/API 后再实现。"
 
-> **工程师:** "目标项目只想安装规则文档和 skills。"
+> **工程师:** "目标项目只想安装规则文档和 agents。"
 > **Codex:** "这属于安装 **Profile** 的选择，可以使用 `profiles/minimal/profile.toml`，或用 `--only` 明确安装条目。"
 
 > **工程师:** "这个 Spring Boot 项目能直接生成 CRUD 吗？"

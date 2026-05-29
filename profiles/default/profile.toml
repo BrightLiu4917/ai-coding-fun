@@ -8,15 +8,11 @@ items = [
   "CONTEXT-MAP.md",
   "openspec",
   "docs",
-  ".codex",
+  "agents",
   "tools/codegen/java-springboot-crud-adapters/README.md",
   "tools/codegen/java-springboot-crud-adapters/generic",
   "scripts",
   "templates",
   "profiles",
   "examples"
-]
-
-exclude_items = [
-  ".codex/skills/codegen-java-springboot-gupo-crud"
 ]

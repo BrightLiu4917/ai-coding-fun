@@ -1,0 +1,20 @@
+name = "generic"
+status = "preview-only"
+description = "通用 Java Spring Boot CRUD 草稿 adapter。只生成审查用预览包，不直接写入业务源码目录。"
+
+[capabilities]
+entity = true
+dto = true
+vo = true
+mapper_java = true
+mapper_xml = true
+service = true
+controller = true
+
+[safety]
+preview_first = true
+default_output_dir = ".agent/codegen-preview"
+write_business_source = false
+requires_confirmed_fields = true
+requires_confirmed_api_contract = true
+requires_confirmed_db_schema = true

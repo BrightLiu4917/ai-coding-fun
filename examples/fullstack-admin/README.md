@@ -9,7 +9,7 @@ your-admin/
 ├── AGENTS.md
 ├── openspec/
 ├── docs/
-├── .codex/
+├── agents/
 ├── backend/
 └── frontend/
 ```
@@ -26,16 +26,14 @@ bash scripts/install-to-project.sh --backup --profile default /path/to/your-admi
 管理端新功能默认流程：
 
 ```text
-product-discovery
--> workflow-openspec-propose
--> workflow-openspec-grill，如需要追问和术语校准
--> design-ux-review / design-ui-system
--> backend-common-api-contract-review
--> dba-mysql，如涉及数据库
--> frontend-common-implementation / backend-java-springboot，可在 API 契约确认后并行
--> frontend-common-tdd / method-tdd / qa-e2e-test
--> design-visual-qa
--> release-production-review
+agent-product
+-> agent-openspec
+-> agent-ui
+-> agent-api
+-> agent-dba，如涉及数据库
+-> agent-web / agent-java，可在 API 契约确认后并行
+-> agent-test
+-> agent-release
 ```
 
 ## 示例文件
@@ -43,3 +41,9 @@ product-discovery
 - `openspec/changes/add-user-status-filter/`：管理端筛选能力 OpenSpec change 示例。
 - `api-contracts/user-status-options.md`：前后端 API 契约示例。
 - `review-report.md`：发布前审查报告示例。
+
+## API contract 和 OpenSpec 的关系
+
+- `openspec/changes/add-user-status-filter/` 是事实源，记录范围、设计、任务和规格。
+- `api-contracts/user-status-options.md` 是接口契约展开文档，服务前后端联调。
+- 如果两者冲突，以 OpenSpec 中已确认的规格为准，并同步更新 API contract。

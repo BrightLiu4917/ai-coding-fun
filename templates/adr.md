@@ -1,18 +1,18 @@
 # ADR: 标题
 
-## Status
+## 状态
 Proposed
 
-## Context
+## 背景
 背景。
 
-## Decision
+## 决策
 决策。
 
-## Consequences
+## 影响
 - 正面影响：
 - 负面影响：
 - 风险：
 
-## Alternatives
+## 备选方案
 - 备选方案：

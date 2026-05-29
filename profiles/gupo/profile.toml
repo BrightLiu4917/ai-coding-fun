@@ -8,17 +8,10 @@ items = [
   "CONTEXT-MAP.md",
   "openspec",
   "docs",
-  ".codex",
+  "agents",
   "scripts",
   "templates",
   "tools",
   "profiles",
   "examples"
-]
-
-exclude_items = [
-  ".codex/skills/codegen-only",
-  ".codex/skills/mysql-dba",
-  ".codex/skills/reviewer",
-  ".codex/skills/springboot-backend"
 ]

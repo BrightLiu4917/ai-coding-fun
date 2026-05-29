@@ -1,0 +1,348 @@
+schema: spec-driven
+
+# OpenSpec 全局配置
+# 目标：强制 AI 产出的需求、架构、设计、任务和审查文档使用简体中文。
+
+context: |
+  你是专业的软件需求文档、系统架构文档、技术设计文档生成助手。
+
+  全局语言规则：
+  - 所有输出必须使用简体中文。
+  - Markdown 标题、章节名称、功能描述、业务逻辑说明、流程说明、状态说明、任务描述、架构说明、数据说明、错误说明、权限说明、交互说明、UI 描述、需求描述和系统说明必须为中文。
+  - 禁止英文段落、英文标题、英文业务解释、英文流程描述、英文任务描述和中英混杂段落。
+
+  允许保留英文的技术内容：
+  - API Path、URL、JSON 字段、数据库字段名、表名、类名、方法名、函数名、HTTP Method、枚举值、代码、Shell 命令、SQL、Redis Key、Docker 名称、Kubernetes 名称、英文技术术语、第三方库名称、SDK 名称和协议名称。
+
+  英文强制翻译规则：
+  - OpenSpec 需求描述不得使用 SHALL、MUST、SHOULD、GIVEN、WHEN、THEN、AND 作为业务流程词。
+  - 使用“系统必须”“系统应该”“前置条件”“当”“则”“并且”等中文表达。
+  - 任务状态必须使用“待处理”“进行中”“已完成”，不得使用 Todo、Pending、Done、Completed、In Progress。
+
+  输出质量规则：
+  - 使用标准 Markdown 格式。
+  - 文档结构必须清晰。
+  - 内容必须工程化、结构化，并适合开发团队直接使用。
+  - 避免空洞描述和 AI 套话。
+  - 优先输出真实业务逻辑。
+  - 优先考虑系统扩展性、可维护性、数据安全和可验证性。
+
+glossary:
+  Overview: 概述
+  Summary: 总结
+  Goals: 目标
+  Non-goals: 非目标
+  Requirements: 需求
+  Requirement: 需求
+  Scenario: 场景
+  Features: 功能
+  Tasks: 任务
+  Design: 设计
+  Architecture: 架构
+  Database: 数据库
+  API Design: 接口设计
+  Pending: 待处理
+  Todo: 待处理
+  Done: 已完成
+  Completed: 已完成
+  In Progress: 进行中
+  Draft: 草稿
+  Review: 审核中
+  Deploy: 部署
+  Testing: 测试
+  Success: 成功
+  Failed: 失败
+  Error: 错误
+  Why: 背景
+  What: 变更内容
+  Impact: 影响
+  Scope: 范围
+  Endpoint: 接口
+  Request: 请求
+  Response: 响应
+  Errors: 错误码
+  Pagination: 分页
+  Security: 安全
+  SHALL: 必须
+  MUST: 必须
+  SHOULD: 应该
+  GIVEN: 前置条件
+  WHEN: 当
+  THEN: 则
+  AND: 并且
+  Method: 请求方法
+  Path: 接口路径
+  Auth: 鉴权方式
+
+tech_stack:
+  backend:
+    - Java 17
+    - Spring Boot 4
+    - MyBatis
+    - MyBatis-Plus
+    - Go
+    - Gin
+    - PHP
+  frontend:
+    - Vue3
+    - React
+    - TypeScript
+    - 微信小程序
+  data:
+    - MySQL 8
+    - Redis
+  integration:
+    - RESTful API
+    - Docker
+
+project_types:
+  - SaaS 平台
+  - 企业管理后台
+  - 小程序业务系统
+  - ERP 系统
+  - 业务管理系统
+  - 数据管理系统
+  - 数据分析平台
+  - 内容管理系统
+  - 交易和审批系统
+
+rules:
+  proposal:
+    required_language: 简体中文
+    max_words: 1500
+    required_sections:
+      - 项目背景
+      - 项目目标
+      - 核心问题
+      - 功能范围
+      - 核心价值
+      - 非目标
+      - 影响范围
+      - 风险说明
+      - 待确认问题
+    forbidden:
+      - 英文章节标题
+      - 英文业务描述
+      - 英文段落
+      - 中英混杂业务段落
+
+  design:
+    required_language: 简体中文
+    required_sections:
+      - 系统架构
+      - 模块设计
+      - 数据库设计
+      - 接口设计
+      - 流程设计
+      - 技术选型
+      - 性能设计
+      - 扩展性设计
+      - 安全设计
+      - 回滚方案
+      - 验证方案
+    forbidden:
+      - 英文段落
+      - 未确认业务规则
+      - 只写技术实现不写业务约束
+
+  spec:
+    required_language: 简体中文
+    required_sections:
+      - 功能模块
+      - 业务流程
+      - 状态流转
+      - 数据结构
+      - 接口设计
+      - 权限设计
+      - 异常处理
+      - 边界情况处理
+      - 数据校验规则
+      - 日志说明
+      - 待确认问题
+    forbidden:
+      - 英文标题
+      - 英文业务说明
+      - 未确认状态或枚举
+      - SHALL
+      - MUST
+      - SHOULD
+      - GIVEN
+      - WHEN
+      - THEN
+      - AND SHALL
+    chinese_requirement_keywords:
+      - 系统必须
+      - 系统应该
+      - 前置条件
+      - 当
+      - 则
+      - 并且
+
+  tasks:
+    required_language: 简体中文
+    required_fields:
+      - 优先级
+      - 状态
+      - 负责人
+      - 预计工时
+      - 验收标准
+    allowed_status:
+      - 待处理
+      - 进行中
+      - 已完成
+    forbidden_terms:
+      - Todo
+      - Pending
+      - Done
+      - Completed
+      - In Progress
+    required_rule:
+      - 每个任务必须明确、可执行、可验收。
+      - 每个任务尽量控制在 2 小时内。
+      - 不允许只有“开发功能”“优化代码”这类不可验收描述。
+
+  api:
+    required_language: 简体中文
+    required_sections:
+      - 接口说明
+      - 请求参数
+      - 响应参数
+      - 请求示例
+      - 响应示例
+      - 错误码
+      - 鉴权说明
+      - 兼容性
+      - 安全说明
+    allowed_english:
+      - API Path
+      - JSON 字段
+      - HTTP Method
+      - 枚举值
+
+  database:
+    required_language: 简体中文
+    required_sections:
+      - 字段说明
+      - 类型说明
+      - 索引说明
+      - 主键说明
+      - 关联关系
+      - 默认值
+      - 非空约束
+      - 回滚方案
+    allowed_english:
+      - 表名
+      - 字段名
+      - 索引名
+      - SQL
+    required_rule:
+      - 必须说明历史数据影响。
+      - 必须说明默认值和非空约束。
+      - 必须说明索引选择理由。
+      - 涉及 ALTER、DROP、TRUNCATE、批量 UPDATE 或批量 DELETE 时必须先等待用户确认。
+
+  review:
+    required_language: 简体中文
+    required_sections:
+      - 审查结论
+      - 关键风险
+      - 代码问题
+      - 数据库问题
+      - 接口问题
+      - 安全问题
+      - 性能问题
+      - 测试缺口
+      - 修复建议
+    forbidden:
+      - 只给总体评价不列文件和证据
+      - 把 deepv4 意见直接当作已确认事实
+
+  release:
+    required_language: 简体中文
+    required_sections:
+      - 发布结论
+      - 变更范围
+      - 验证结果
+      - 数据库变更
+      - 配置变更
+      - 回滚方案
+      - 残余风险
+    forbidden:
+      - 未验证即声明可发布
+      - 未说明回滚方案即通过发布
+
+validation:
+  markdown_headings_must_be_chinese: true
+  business_text_must_be_chinese: true
+  english_business_sentence_heuristic: true
+  tasks_must_be_actionable: true
+  tasks_should_fit_within_hours: 2
+  allow_english_for_technical_tokens: true
+  on_english_business_text: 自动翻译为中文后重新输出
+  strict_chinese_env:
+    name: OPENSPEC_STRICT_CHINESE
+    default: "1"
+    disable_value: "0"
+    description: 默认检查疑似英文业务句子；如误伤大量技术说明，可临时设置为 0，只保留固定英文模板词检查。
+  forbidden_business_terms:
+    - Overview
+    - Summary
+    - Goals
+    - Non-goals
+    - Requirements
+    - Requirement
+    - Scenario
+    - Features
+    - Tasks
+    - Design
+    - Architecture
+    - Database
+    - Pending
+    - Todo
+    - Done
+    - Completed
+    - In Progress
+    - Draft
+    - Review
+    - Deploy
+    - Testing
+    - Success
+    - Failed
+    - Error
+    - Why
+    - What
+    - Impact
+    - Scope
+    - Endpoint
+    - Request
+    - Response
+    - Errors
+    - Pagination
+    - Security
+    - SHALL
+    - MUST
+    - SHOULD
+    - GIVEN
+    - WHEN
+    - THEN
+    - AND SHALL
+  allowed_english_contexts:
+    - API Path
+    - URL
+    - JSON 字段
+    - 数据库字段名
+    - 表名
+    - 类名
+    - 方法名
+    - 函数名
+    - HTTP Method
+    - 枚举值
+    - 代码块
+    - Shell 命令
+    - SQL
+    - Redis Key
+    - Docker 名称
+    - Kubernetes 名称
+    - 第三方库名称
+    - SDK 名称
+    - 协议名称

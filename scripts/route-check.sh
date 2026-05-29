@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ROUTING="$ROOT/docs/SKILL_ROUTING.md"
+ROUTING="$ROOT/docs/AGENT_ROUTING.md"
 AGENTS="$ROOT/AGENTS.md"
 fail=0
 
@@ -19,59 +19,35 @@ require_in_file() {
   fi
 }
 
-[[ -f "$ROUTING" ]] || error "Missing docs/SKILL_ROUTING.md"
+[[ -f "$ROUTING" ]] || error "Missing docs/AGENT_ROUTING.md"
 [[ -f "$AGENTS" ]] || error "Missing AGENTS.md"
 
 for token in \
-  "workflow-openspec-propose" \
-  "workflow-openspec-grill" \
-  "workflow-openspec-apply" \
-  "workflow-openspec-archive" \
-  "method-grill-with-docs" \
-  "method-diagnose" \
-  "method-tdd" \
-  "method-architecture-review" \
-  "method-zoom-out" \
-  "backend-common-api-contract-review" \
-  "backend-java-springboot" \
-  "dba-mysql" \
-  "codegen-java-springboot-crud" \
-  "codegen-java-springboot-gupo-crud" \
-  "release-production-review" \
-  "并行标注" \
-  "循环/回退" \
-  "兼容入口"; do
+  "agent-product" \
+  "agent-openspec" \
+  "agent-architect" \
+  "agent-ui" \
+  "agent-web" \
+  "agent-api" \
+  "agent-java" \
+  "agent-dba" \
+  "agent-codegen" \
+  "agent-test" \
+  "agent-security" \
+  "agent-performance" \
+  "agent-release"; do
   require_in_file "$ROUTING" "$token"
+  require_in_file "$AGENTS" "$token"
+  [[ -f "$ROOT/agents/$token.md" ]] || error "Missing agents/$token.md"
 done
 
-for mapping in \
-  "codegen-only:codegen-java-springboot-crud" \
-  "mysql-dba:dba-mysql" \
-  "springboot-backend:backend-java-springboot" \
-  "reviewer:release-production-review"; do
-  old="${mapping%%:*}"
-  new="${mapping##*:}"
-  pattern="\`?${old}\`?[[:space:]]*->[[:space:]]*\`?${new}\`?"
-  if ! grep -Eq -- "$pattern" "$ROUTING"; then
-    error "Missing compatibility mapping '$old -> $new' in docs/SKILL_ROUTING.md"
-  fi
-  if ! grep -Eq -- "$pattern" "$AGENTS"; then
-    error "Missing compatibility mapping '$old -> $new' in AGENTS.md"
-  fi
-done
+require_in_file "$AGENTS" "docs/AGENT_ROUTING.md"
+require_in_file "$ROUTING" "未确认 adapter 时禁止生成"
+require_in_file "$ROUTING" "generic adapter"
+require_in_file "$ROUTING" "deepv4"
 
-require_in_file "$AGENTS" "docs/SKILL_ROUTING.md"
-
-if grep -R "tools/codegen/java-springboot-crud/scripts" "$ROOT/AGENTS.md" "$ROOT/docs" "$ROOT/.codex/skills" "$ROOT/README.md" >/dev/null 2>&1; then
+if grep -R "tools/codegen/java-springboot-crud/scripts" "$ROOT/AGENTS.md" "$ROOT/docs" "$ROOT/agents" "$ROOT/README.md" >/dev/null 2>&1; then
   error "Old generic-looking codegen script path is still referenced"
-fi
-
-if ! grep -Fq "未确认 adapter 时禁止生成" "$ROUTING"; then
-  error "docs/SKILL_ROUTING.md must state adapter must be confirmed before CRUD generation"
-fi
-
-if ! grep -Fq "generic adapter 不可用" "$ROUTING" || ! grep -Fq "backend-java-springboot" "$ROUTING"; then
-  error "docs/SKILL_ROUTING.md must route missing generic adapter to backend-java-springboot after confirmation"
 fi
 
 if [[ "$fail" -eq 1 ]]; then

@@ -81,6 +81,7 @@ read_profile_items() {
 is_excluded() {
   local item="$1"
   local exclude
+  [[ "${#EXCLUDE_ITEMS[@]}" -eq 0 ]] && return 1
   for exclude in "${EXCLUDE_ITEMS[@]}"; do
     if [[ "$item" == "$exclude" || "$item" == "$exclude/"* ]]; then
       return 0
@@ -92,6 +93,7 @@ is_excluded() {
 has_nested_exclusion() {
   local item="$1"
   local exclude
+  [[ "${#EXCLUDE_ITEMS[@]}" -eq 0 ]] && return 1
   for exclude in "${EXCLUDE_ITEMS[@]}"; do
     if [[ "$exclude" == "$item/"* ]]; then
       return 0
@@ -104,7 +106,7 @@ copy_path() {
   local item="$1"
   local src="$ROOT/$item"
   local dst="$TARGET/$item"
-  local backup_root="$TARGET/.codex-install-backup/$RUN_ID"
+  local backup_root="$TARGET/.agent/install-backup/$RUN_ID"
 
   validate_item "$item"
 
@@ -142,7 +144,7 @@ copy_path() {
     fi
 
     if [[ "$BACKUP" -eq 1 ]]; then
-      log "[BACKUP] $item -> .codex-install-backup/$RUN_ID/$item"
+      log "[BACKUP] $item -> .agent/install-backup/$RUN_ID/$item"
       if [[ "$DRY_RUN" -eq 0 ]]; then
         mkdir -p "$(dirname "$backup_root/$item")"
         cp -R "$dst" "$backup_root/$item"
@@ -240,7 +242,13 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 [[ -n "$TARGET" ]] || { usage; exit 1; }
-[[ -d "$TARGET" ]] || fail "Target directory does not exist: $TARGET"
+if [[ ! -d "$TARGET" ]]; then
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    log "[DRY-RUN] Target directory does not exist yet: $TARGET"
+  else
+    fail "Target directory does not exist: $TARGET"
+  fi
+fi
 
 RUN_ID="$(date +%Y%m%d%H%M%S)"
 

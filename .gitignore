@@ -1,0 +1,55 @@
+# 本仓库忽略本机配置、密钥、运行日志、构建产物和 IDE 临时状态。
+# .ai-control/ 是可提交的项目画像，不能忽略。
+
+# Local AI runtime files
+.agent/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDE local state
+.idea/
+!.idea/
+!.idea/.gitignore
+*.iml
+.vscode/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+
+# Logs
+*.log
+logs/
+
+# Node
+node_modules/
+.pnpm/
+dist/
+build/
+coverage/
+
+# Java
+target/
+out/
+
+# Go / PHP
+bin/
+vendor/
+
+# Python / cache
+__pycache__/
+.pytest_cache/
+.cache/
+
+# Temporary files
+tmp/
+temp/

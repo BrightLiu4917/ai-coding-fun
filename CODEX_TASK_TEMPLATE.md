@@ -63,14 +63,14 @@ openspec/changes/<change-id>/
 8. 需要我确认的问题
 
 ## Matt-style 工程方法
-- 需求不清：用 `method-grill-with-docs` 做追问、术语校准和场景压力测试。
-- 需要进入规格流程：用 `workflow-openspec-propose` 创建或完善 OpenSpec change。
-- 需要把追问结果落到 OpenSpec：用 `workflow-openspec-grill`。
-- 代码区域陌生：用 `method-zoom-out` 先建立能力地图。
-- Bug 或性能问题：用 `method-diagnose` 建立反馈回路后再修。
-- 需要测试保护：用 `method-tdd` 或对应前端测试 skill 做红绿重构。
-- 解耦重构：用 `method-architecture-review` 找 deep module、seam 和分批切片。
-- 详细 skill 路由、并行、循环、回退和冲突处理：按 `docs/SKILL_ROUTING.md`。
+- 需求不清：用 `agent-product` 做追问、术语校准和场景压力测试。
+- 需要进入规格流程：用 `agent-openspec` 创建或完善 OpenSpec change。
+- 需要把追问结果落到 OpenSpec：用 `agent-openspec`。
+- 代码区域陌生：用 `agent-architect` 先建立能力地图。
+- Bug 或性能问题：用 `agent-architect` 建立反馈回路后再修。
+- 需要测试保护：用 `agent-test` 或对应前端测试 agent 做红绿重构。
+- 解耦重构：用 `agent-architect` 找 deep module、seam 和分批切片。
+- 详细 agent 路由、并行、循环、回退和冲突处理：按 `docs/AGENT_ROUTING.md`。
 
 ## 强制停止条件
 如果以下内容不清楚，必须 STOP and ASK：
@@ -93,7 +93,8 @@ openspec/changes/<change-id>/
 4. 报告 OpenSpec 变化、变更文件、关键逻辑、SQL 变更、表结构/字段变化、API 变化、前端变化、验证步骤和风险。
 
 ## 推荐验证
-- `bash scripts/skill-check.sh`
+- `bash scripts/agent-check.sh`
 - `bash scripts/route-check.sh`
 - `bash scripts/docs-link-check.sh`
 - `bash scripts/openspec-check.sh openspec/changes/<change-id>`
+- `bash scripts/run-tests.sh`

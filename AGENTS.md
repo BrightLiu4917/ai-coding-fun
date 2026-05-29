@@ -21,10 +21,14 @@
 
 ## 事实源
 - `openspec/`：产品、业务规则、能力规格、变更提案、设计决策、任务清单和归档记录。
+- `openspec/config.yaml`：OpenSpec 中文输出、文档结构和校验规则。
 - `CONTEXT.md` / `CONTEXT-MAP.md`：领域语言、上下文地图和跨角色通用词汇。
 - `docs/adr/`：长期架构决策，只记录难逆转、令人意外且有真实取舍的决策。
 - `docs/`：产品、业务、UX、前端、后端、数据库、测试、安全、性能、审查和发布规则。
-- `.codex/skills/`：专项任务执行规则，保持 `.codex/skills/<skill-name>/SKILL.md` 一层可发现结构。
+- `docs/common/`：跨技术栈的通用接入和项目适配规则。
+- `docs/stacks/`：Spring Boot、Vue3、React、Go、PHP 等技术栈规则。
+- `docs/features/`：JWT、RBAC、CRUD、OpenAPI 等功能规则。
+- `agents/`：专项任务执行手册，使用 `agents/agent-*.md` 命名。
 - `tools/`：可复制到目标项目内使用的确定性工具，例如代码脚手架。
 - `scripts/`：自动化检查和安全网。
 - `templates/`：标准产物模板。
@@ -65,6 +69,8 @@
 ## OpenSpec 工作流
 每个非简单任务，编码前必须创建或读取对应 OpenSpec change，并等待用户确认。
 
+OpenSpec 文档必须遵守 `openspec/config.yaml`：业务说明、章节标题、任务描述、设计说明、状态说明和权限说明必须使用简体中文；API Path、JSON 字段、数据库字段、表名、类名、方法名、枚举值、Shell 命令和 SQL 可以保留英文。
+
 推荐结构：
 
 ```text
@@ -91,50 +97,45 @@ openspec/changes/<change-id>/
 用户确认 OpenSpec change 前，禁止进入实现。
 实现和验证完成后，应将已确认行为归档到 `openspec/specs/`。
 
-## Skill 路由总则
-详细路由、并行/循环/回退规则、冲突处理和 OpenSpec/method 边界见 `docs/SKILL_ROUTING.md`。
+## Agent 路由总则
+详细路由、并行/循环/回退规则和冲突处理见 `docs/AGENT_ROUTING.md`。
 
-高层分层：
-- `workflow-*`：OpenSpec / 流程编排。
-- `method-*`：Matt Pocock 风格工程方法。
-- `product-*`：产品经理。
-- `design-*`：UI/交互设计师。
-- `frontend-*`：前端工程师。
-- `backend-*`：后端工程师。
-- `codegen-*`：代码生成器。
-- `dba-*`：DBA。
-- `qa-*`：测试工程师。
-- `security-*`：安全工程师。
-- `performance-*`：性能工程师。
-- `release-*`：发布/上线审查。
+对用户输出时，必须优先使用中文角色名；需要定位文件或路由时，再在括号中保留 agent id。例如：数据库工程师（`agent-dba`）。
 
 生产级主入口：
-- OpenSpec：`workflow-openspec-propose`、`workflow-openspec-grill`、`workflow-openspec-apply`、`workflow-openspec-archive`
-- 方法：`method-grill-with-docs`、`method-diagnose`、`method-tdd`、`method-architecture-review`、`method-zoom-out`
-- 后端：`backend-java-springboot`
-- 数据库：`dba-mysql`
-- 代码生成：`codegen-java-springboot-crud` 先选择 adapter；当前可用专用实现为 `codegen-java-springboot-gupo-crud`
-- 审查：`release-production-review`
-
-兼容入口只用于旧项目迁移，不作为新能力主入口：
-- `codegen-only` -> `codegen-java-springboot-crud`
-- `mysql-dba` -> `dba-mysql`
-- `springboot-backend` -> `backend-java-springboot`
-- `reviewer` -> `release-production-review`
+- 产品需求工程师：`agents/agent-product.md`
+- OpenSpec 规格工程师：`agents/agent-openspec.md`
+- 系统架构师：`agents/agent-architect.md`
+- UI 交互设计师：`agents/agent-ui.md`
+- Web 前端开发工程师：`agents/agent-web.md`
+- API 契约工程师：`agents/agent-api.md`
+- Java 后端开发工程师：`agents/agent-java.md`
+- Go 后端开发工程师：`agents/agent-go.md`
+- PHP 后端开发工程师：`agents/agent-php.md`
+- 数据库工程师：`agents/agent-dba.md`
+- 代码生成工程师：`agents/agent-codegen.md`
+- 测试工程师：`agents/agent-test.md`
+- 安全工程师：`agents/agent-security.md`
+- 性能工程师：`agents/agent-performance.md`
+- 发布审查工程师：`agents/agent-release.md`
 
 ## 不可跳过规则
-- 非简单任务必须先走 `workflow-openspec-propose` 或读取已有 change。
-- 需求模糊、术语不清或需要文档沉淀时，使用 `method-grill-with-docs`。
-- 已有 OpenSpec change 需要追问或校准时，使用 `workflow-openspec-grill`。
-- 陌生代码区域必须先 `method-zoom-out`，再诊断、重构或实现。
-- Bug 不允许直接猜修，必须先走 `method-diagnose` 或对应诊断 skill。
-- 涉及 DB/SQL/表字段/索引，必须先走 `dba-mysql`。
-- Java Spring Boot CRUD 脚手架必须先走 `codegen-java-springboot-crud` 识别 adapter；未确认 adapter 时禁止生成脚手架。generic adapter 不可用时，经用户确认可转入 `backend-java-springboot` 做生产级手写实现；gupo 项目才可转入 `codegen-java-springboot-gupo-crud`。
-- 涉及 API 入参/响应/分页/兼容性，必须走 `backend-common-api-contract-review`。
-- 涉及页面、组件、交互、视觉，必须走 `design-ux-review` 或 `design-ui-system`。
-- 涉及解耦、重构、跨模块依赖，必须先走 `method-architecture-review`。
+- 非简单任务必须先读 OpenSpec 规格工程师 `agents/agent-openspec.md` 或读取已有 change。
+- 需求模糊、术语不清或需要业务建模时，读产品需求工程师 `agents/agent-product.md`。
+- 陌生代码区域或跨模块影响不清时，先读系统架构师 `agents/agent-architect.md`。
+- Bug 不允许直接猜修，必须先诊断、复现，再按对应 agent 修复。
+- 涉及 DB/SQL/表字段/索引，必须先读数据库工程师 `agents/agent-dba.md`。
+- Java Spring Boot CRUD 脚手架必须先读代码生成工程师 `agents/agent-codegen.md` 识别 adapter；未确认 adapter 时禁止生成脚手架。
+- 涉及 API 入参/响应/分页/兼容性，必须读 API 契约工程师 `agents/agent-api.md`。
+- 涉及页面、组件、交互、视觉，必须读 UI 交互设计师 `agents/agent-ui.md`。
+- 涉及 Java 后端实现，读 Java 后端开发工程师 `agents/agent-java.md` 和 `docs/stacks/SPRING_BOOT.md`。
+- 涉及 Go / Gin 后端实现，读 Go 后端开发工程师 `agents/agent-go.md` 和 `docs/stacks/GO_GIN.md`。
+- 涉及 PHP 后端实现，读 PHP 后端开发工程师 `agents/agent-php.md` 和 `docs/stacks/PHP.md`。
+- 涉及 Vue/React 前端实现，读 Web 前端开发工程师 `agents/agent-web.md` 和对应 `docs/stacks/VUE3.md` 或 `docs/stacks/REACT.md`。
+- 涉及 JWT 登录、token、登出或会话安全，读 `docs/features/JWT_RULES.md`。
+- 涉及后台菜单、按钮、接口权限或数据范围，读 `docs/features/RBAC_RULES.md`。
 - 实现后必须执行验证，或说明无法验证原因。
-- 交付前必须走 `release-production-review`。
+- 交付前必须读发布审查工程师 `agents/agent-release.md`。
 
 ## 编码前必须行为
 1. 阅读 `AGENTS.md`、相关 `docs/` 和相关 OpenSpec specs/changes。

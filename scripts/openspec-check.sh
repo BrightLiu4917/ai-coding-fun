@@ -21,6 +21,22 @@ require_file() {
 require_file "proposal.md"
 require_file "tasks.md"
 
+if [[ -x "$(dirname "$0")/impact-check.sh" ]]; then
+  "$(dirname "$0")/impact-check.sh" "$CHANGE_DIR" || fail=1
+fi
+
+if [[ -x "$(dirname "$0")/route-compliance-check.sh" ]]; then
+  "$(dirname "$0")/route-compliance-check.sh" "$CHANGE_DIR" || fail=1
+fi
+
+if [[ -x "$(dirname "$0")/rbac-check.sh" ]]; then
+  "$(dirname "$0")/rbac-check.sh" "$CHANGE_DIR" || fail=1
+fi
+
+if [[ -x "$(dirname "$0")/openspec-language-check.sh" ]]; then
+  "$(dirname "$0")/openspec-language-check.sh" "$CHANGE_DIR" || fail=1
+fi
+
 if [[ ! -d "$CHANGE_DIR/specs" ]]; then
   echo "[WARN] Missing specs delta directory: $CHANGE_DIR/specs"
 fi

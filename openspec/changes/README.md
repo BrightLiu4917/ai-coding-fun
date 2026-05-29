@@ -1,4 +1,4 @@
-# OpenSpec Changes
+# OpenSpec 变更
 
 每个非简单任务创建一个 change：
 

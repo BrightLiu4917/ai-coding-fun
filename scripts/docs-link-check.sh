@@ -19,7 +19,8 @@ should_skip_target() {
   [[ "$target" == *"*"* ]] && return 0
   [[ "$target" == *"..."* ]] && return 0
   [[ "$target" == --* ]] && return 0
-  [[ "$target" == ".codex/codegen.toml" ]] && return 0
+  [[ "$target" == .agent/* ]] && return 0
+  [[ "$target" == tools/codegen/java-springboot-crud-adapters/gupo* ]] && return 0
   return 1
 }
 
@@ -61,7 +62,7 @@ extract_repo_paths() {
   local file="$1"
   grep -Eo '`[^`]+`' "$file" \
     | tr -d '`' \
-    | grep -E '^(./)?(\.codex|docs|openspec|profiles|scripts|templates|tools|examples)/|^(AGENTS|CODEX_TASK_TEMPLATE|CONTEXT|CONTEXT-MAP|README)(\.md)?$' \
+    | grep -E '^(./)?(docs|openspec|profiles|scripts|templates|tools|examples)/|^(AGENTS|CODEX_TASK_TEMPLATE|CONTEXT|CONTEXT-MAP|README)(\.md)?$' \
     || true
 }
 
@@ -75,7 +76,14 @@ while IFS= read -r file; do
   done < <(extract_repo_paths "$file")
 done < <(find "$ROOT" \
   -path "$ROOT/.git" -prune -o \
+  -path "$ROOT/.agent" -prune -o \
   -path "$ROOT/.idea" -prune -o \
+  -path "*/.agent" -prune -o \
+  -path "*/.git.bak-*" -prune -o \
+  -path "*/node_modules" -prune -o \
+  -path "*/.pnpm" -prune -o \
+  -path "*/target" -prune -o \
+  -path "*/dist" -prune -o \
   -name '*.md' -type f -print | sort)
 
 if [[ "$fail" -eq 1 ]]; then

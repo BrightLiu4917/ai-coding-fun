@@ -9,7 +9,7 @@ your-project/
 ├── AGENTS.md
 ├── openspec/
 ├── docs/
-├── .codex/
+├── agents/
 ├── scripts/
 ├── tools/
 ├── pom.xml
@@ -26,15 +26,13 @@ bash scripts/install-to-project.sh --backup --profile minimal /path/to/your-proj
 后端任务默认流程：
 
 ```text
-workflow-openspec-propose
--> workflow-openspec-grill，如字段含义或历史数据不清
--> dba-mysql，如涉及表结构、SQL、索引或数据兼容
--> backend-common-api-contract-review，如涉及接口
--> codegen-java-springboot-crud，如涉及 CRUD 脚手架，先识别 adapter
--> codegen-java-springboot-gupo-crud，如明确为 gupo 项目
--> backend-java-springboot
--> method-tdd
--> release-production-review
+agent-openspec
+-> agent-dba，如涉及表结构、SQL、索引或数据兼容
+-> agent-api，如涉及接口
+-> agent-codegen，如涉及 CRUD 脚手架，先识别 adapter
+-> agent-java
+-> agent-test
+-> agent-release
 ```
 
 ## 示例文件
@@ -42,3 +40,9 @@ workflow-openspec-propose
 - `openspec/changes/add-admin-audit-log/`：后端审计日志能力的 OpenSpec change 示例。
 - `api-contracts/admin-audit-log-list.md`：API 契约示例。
 - `review-report.md`：发布前审查报告示例。
+
+## API contract 和 OpenSpec 的关系
+
+- `openspec/changes/add-admin-audit-log/` 是事实源，记录范围、设计、任务和规格。
+- `api-contracts/admin-audit-log-list.md` 是接口契约展开文档，服务前后端联调和后端自测。
+- 如果两者冲突，以 OpenSpec 中已确认的规格为准，并同步更新 API contract。

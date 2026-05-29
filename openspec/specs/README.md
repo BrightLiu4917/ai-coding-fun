@@ -1,4 +1,4 @@
-# OpenSpec Specs
+# OpenSpec 规格
 
 `specs/` 是当前项目已确认行为的事实源。
 

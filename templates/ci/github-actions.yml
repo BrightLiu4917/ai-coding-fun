@@ -1,0 +1,68 @@
+name: control-system-checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Shell syntax
+        run: bash -n scripts/*.sh scripts/providers/*.sh
+
+      - name: Agent check
+        run: bash scripts/agent-check.sh
+
+      - name: Route check
+        run: bash scripts/route-check.sh
+
+      - name: Docs link check
+        run: bash scripts/docs-link-check.sh
+
+      - name: OpenSpec conflict check
+        run: bash scripts/openspec-conflict-check.sh
+
+      - name: OpenSpec change checks
+        run: |
+          found=0
+          for change in openspec/changes/* examples/*/openspec/changes/*; do
+            [ -d "$change" ] || continue
+            found=1
+            bash scripts/openspec-check.sh "$change"
+          done
+          [ "$found" -eq 1 ] || echo "No OpenSpec changes found."
+
+      - name: OpenSpec language check
+        run: bash scripts/openspec-language-check.sh openspec
+
+      - name: API contract checks
+        run: |
+          found=0
+          for file in examples/*/api-contracts/*.md; do
+            [ -f "$file" ] || continue
+            found=1
+            bash scripts/api-contract-check.sh "$file"
+          done
+          [ "$found" -eq 1 ] || echo "No API contract files found."
+
+      - name: SQL safety checks
+        run: |
+          found=0
+          while IFS= read -r file; do
+            found=1
+            bash scripts/sql-safety-check.sh "$file"
+          done < <(find . -type f -name '*.sql' \
+            -not -path './.git/*' \
+            -not -path './node_modules/*' \
+            -not -path './target/*' \
+            -not -path './dist/*')
+          [ "$found" -eq 1 ] || echo "No SQL files found."
+
+      - name: Project ready check
+        run: bash scripts/check-project-ready.sh

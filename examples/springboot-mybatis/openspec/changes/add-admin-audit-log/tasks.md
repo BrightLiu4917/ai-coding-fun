@@ -1,17 +1,19 @@
-# Tasks
+# 任务清单
 
-## Spec
+## 规格确认
 - [ ] 确认审计日志能力边界。
 - [ ] 确认表结构、字段含义、租户和软删除规则。
 - [ ] 确认 API 契约。
+- [ ] 确认后台审计日志访问控制模式、权限点和无权限返回。
 
-## Implementation
-- [ ] 通过 `dba-mysql` 审查表结构和索引。
-- [ ] 通过 `backend-common-api-contract-review` 审查接口路径、请求和响应。
+## 实现任务
+- [ ] 通过数据库工程师（`agent-dba`）审查表结构和索引。
+- [ ] 通过 API 契约工程师（`agent-api`）审查接口路径、请求和响应。
+- [ ] 通过安全工程师（`agent-security`）审查访问控制、租户隔离和越权场景。
 - [ ] 实现 Controller、Service、Mapper/XML。
 - [ ] 补充测试。
 
-## Verification
+## 验证任务
 - [ ] 分页查询正常。
 - [ ] 筛选条件正常。
 - [ ] 无权限用户不可查询。
