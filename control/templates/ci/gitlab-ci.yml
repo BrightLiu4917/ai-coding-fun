@@ -1,0 +1,12 @@
+stages:
+  - checks
+
+control-system-checks:
+  stage: checks
+  image: bash:5.2
+  script:
+    - bash -n .ai-control/control/scripts/*.sh .ai-control/control/scripts/providers/*.sh
+    - bash .ai-control/control/scripts/agent-check.sh
+    - bash .ai-control/control/scripts/route-check.sh
+    - bash .ai-control/control/scripts/docs-link-check.sh
+    - bash .ai-control/control/scripts/openspec-conflict-check.sh

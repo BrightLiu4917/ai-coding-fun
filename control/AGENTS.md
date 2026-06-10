@@ -20,18 +20,18 @@
 9. 视觉和交互质量
 
 ## 事实源
-- `control/openspec/`：产品、业务规则、能力规格、变更提案、设计决策、任务清单和归档记录。
-- `control/openspec/config.yaml`：OpenSpec 中文输出、文档结构和校验规则。
-- `control/CONTEXT.md` / `control/CONTEXT-MAP.md`：领域语言、上下文地图和跨角色通用词汇。
-- `control/docs/adr/`：长期架构决策，只记录难逆转、令人意外且有真实取舍的决策。
-- `control/docs/`：产品、业务、UX、前端、后端、数据库、测试、安全、性能、审查和发布规则。
-- `control/docs/common/`：跨技术栈的通用接入和项目适配规则。
-- `control/docs/stacks/`：Spring Boot、Vue3、React、Go、PHP 等技术栈规则。
-- `control/docs/features/`：JWT、RBAC、CRUD、OpenAPI 等功能规则。
-- `control/agents/`：专项任务执行手册，使用 `control/agents/agent-*.md` 命名。
-- `control/tools/`：可复制到目标项目内使用的确定性工具，例如代码脚手架。
-- `control/scripts/`：自动化检查和安全网。
-- `control/templates/`：标准产物模板。
+- `openspec/`：产品、业务规则、能力规格、变更提案、设计决策、任务清单和归档记录。
+- `openspec/config.yaml`：OpenSpec 中文输出、文档结构和校验规则。
+- `CONTEXT.md` / `CONTEXT-MAP.md`：领域语言、上下文地图和跨角色通用词汇。
+- `.ai-control/control/docs/adr/`：长期架构决策，只记录难逆转、令人意外且有真实取舍的决策。
+- `.ai-control/control/docs/`：产品、业务、UX、前端、后端、数据库、测试、安全、性能、审查和发布规则。
+- `.ai-control/control/docs/common/`：跨技术栈的通用接入和项目适配规则。
+- `.ai-control/control/docs/stacks/`：Spring Boot、Vue3、React、Go、PHP 等技术栈规则。
+- `.ai-control/control/docs/features/`：JWT、RBAC、CRUD、OpenAPI 等功能规则。
+- `.ai-control/control/agents/`：专项任务执行手册，使用 `.ai-control/control/agents/agent-*.md` 命名。
+- `.ai-control/control/tools/`：可复制到目标项目内使用的确定性工具，例如代码脚手架。
+- `.ai-control/control/scripts/`：自动化检查和安全网。
+- `.ai-control/control/templates/`：标准产物模板。
 
 ## 绝对禁止
 - 禁止猜测缺失的业务逻辑。
@@ -69,12 +69,12 @@
 ## OpenSpec 工作流
 每个非简单任务，编码前必须创建或读取对应 OpenSpec change，并等待用户确认。
 
-OpenSpec 文档必须遵守 `control/openspec/config.yaml`：业务说明、章节标题、任务描述、设计说明、状态说明和权限说明必须使用简体中文；API Path、JSON 字段、数据库字段、表名、类名、方法名、枚举值、Shell 命令和 SQL 可以保留英文。
+OpenSpec 文档必须遵守 `openspec/config.yaml`：业务说明、章节标题、任务描述、设计说明、状态说明和权限说明必须使用简体中文；API Path、JSON 字段、数据库字段、表名、类名、方法名、枚举值、Shell 命令和 SQL 可以保留英文。
 
 推荐结构：
 
 ```text
-control/openspec/changes/<change-id>/
+openspec/changes/<change-id>/
 ├── proposal.md
 ├── design.md
 ├── tasks.md
@@ -95,51 +95,51 @@ control/openspec/changes/<change-id>/
 9. 需要用户确认的问题。
 
 用户确认 OpenSpec change 前，禁止进入实现。
-实现和验证完成后，应将已确认行为归档到 `control/openspec/specs/`。
+实现和验证完成后，应将已确认行为归档到 `openspec/specs/`。
 
 ## Agent 路由总则
-详细路由、并行/循环/回退规则和冲突处理见 `control/docs/AGENT_ROUTING.md`。
+详细路由、并行/循环/回退规则和冲突处理见 `.ai-control/control/docs/AGENT_ROUTING.md`。
 
 对用户输出时，必须优先使用中文角色名；需要定位文件或路由时，再在括号中保留 agent id。例如：数据库工程师（`agent-dba`）。
 
 生产级主入口：
-- 产品需求工程师：`control/agents/agent-product.md`
-- OpenSpec 规格工程师：`control/agents/agent-openspec.md`
-- 系统架构师：`control/agents/agent-architect.md`
-- UI 交互设计师：`control/agents/agent-ui.md`
-- Web 前端开发工程师：`control/agents/agent-web.md`
-- API 契约工程师：`control/agents/agent-api.md`
-- Java 后端开发工程师：`control/agents/agent-java.md`
-- Go 后端开发工程师：`control/agents/agent-go.md`
-- PHP 后端开发工程师：`control/agents/agent-php.md`
-- 数据库工程师：`control/agents/agent-dba.md`
-- 代码生成工程师：`control/agents/agent-codegen.md`
-- 测试工程师：`control/agents/agent-test.md`
-- 安全工程师：`control/agents/agent-security.md`
-- 性能工程师：`control/agents/agent-performance.md`
-- 发布审查工程师：`control/agents/agent-release.md`
+- 产品需求工程师：`.ai-control/control/agents/agent-product.md`
+- OpenSpec 规格工程师：`.ai-control/control/agents/agent-openspec.md`
+- 系统架构师：`.ai-control/control/agents/agent-architect.md`
+- UI 交互设计师：`.ai-control/control/agents/agent-ui.md`
+- Web 前端开发工程师：`.ai-control/control/agents/agent-web.md`
+- API 契约工程师：`.ai-control/control/agents/agent-api.md`
+- Java 后端开发工程师：`.ai-control/control/agents/agent-java.md`
+- Go 后端开发工程师：`.ai-control/control/agents/agent-go.md`
+- PHP 后端开发工程师：`.ai-control/control/agents/agent-php.md`
+- 数据库工程师：`.ai-control/control/agents/agent-dba.md`
+- 代码生成工程师：`.ai-control/control/agents/agent-codegen.md`
+- 测试工程师：`.ai-control/control/agents/agent-test.md`
+- 安全工程师：`.ai-control/control/agents/agent-security.md`
+- 性能工程师：`.ai-control/control/agents/agent-performance.md`
+- 发布审查工程师：`.ai-control/control/agents/agent-release.md`
 
 ## 不可跳过规则
-- 非简单任务必须先读 OpenSpec 规格工程师 `control/agents/agent-openspec.md` 或读取已有 change。
-- 需求模糊、术语不清或需要业务建模时，读产品需求工程师 `control/agents/agent-product.md`。
-- 陌生代码区域或跨模块影响不清时，先读系统架构师 `control/agents/agent-architect.md`。
+- 非简单任务必须先读 OpenSpec 规格工程师 `.ai-control/control/agents/agent-openspec.md` 或读取已有 change。
+- 需求模糊、术语不清或需要业务建模时，读产品需求工程师 `.ai-control/control/agents/agent-product.md`。
+- 陌生代码区域或跨模块影响不清时，先读系统架构师 `.ai-control/control/agents/agent-architect.md`。
 - Bug 不允许直接猜修，必须先诊断、复现，再按对应 agent 修复。
-- 涉及 DB/SQL/表字段/索引，必须先读数据库工程师 `control/agents/agent-dba.md`。
-- Java Spring Boot CRUD 脚手架必须先读代码生成工程师 `control/agents/agent-codegen.md` 识别 adapter；未确认 adapter 时禁止生成脚手架。
-- 涉及 API 入参/响应/分页/兼容性，必须读 API 契约工程师 `control/agents/agent-api.md`。
-- 涉及页面、组件、交互、视觉，必须读 UI 交互设计师 `control/agents/agent-ui.md`。
-- 涉及 Java 后端实现，读 Java 后端开发工程师 `control/agents/agent-java.md` 和 `control/docs/stacks/SPRING_BOOT.md`。
-- 涉及 Go / Gin 后端实现，读 Go 后端开发工程师 `control/agents/agent-go.md` 和 `control/docs/stacks/GO_GIN.md`。
-- 涉及 PHP 后端实现，读 PHP 后端开发工程师 `control/agents/agent-php.md` 和 `control/docs/stacks/PHP.md`。
-- 涉及 Vue/React 前端实现，读 Web 前端开发工程师 `control/agents/agent-web.md` 和对应 `control/docs/stacks/VUE3.md` 或 `control/docs/stacks/REACT.md`。
-- 涉及 JWT 登录、token、登出或会话安全，读 `control/docs/features/JWT_RULES.md`。
-- 涉及后台菜单、按钮、接口权限或数据范围，读 `control/docs/features/RBAC_RULES.md`。
+- 涉及 DB/SQL/表字段/索引，必须先读数据库工程师 `.ai-control/control/agents/agent-dba.md`。
+- Java Spring Boot CRUD 脚手架必须先读代码生成工程师 `.ai-control/control/agents/agent-codegen.md` 识别 adapter；未确认 adapter 时禁止生成脚手架。
+- 涉及 API 入参/响应/分页/兼容性，必须读 API 契约工程师 `.ai-control/control/agents/agent-api.md`。
+- 涉及页面、组件、交互、视觉，必须读 UI 交互设计师 `.ai-control/control/agents/agent-ui.md`。
+- 涉及 Java 后端实现，读 Java 后端开发工程师 `.ai-control/control/agents/agent-java.md` 和 `.ai-control/control/docs/stacks/SPRING_BOOT.md`。
+- 涉及 Go / Gin 后端实现，读 Go 后端开发工程师 `.ai-control/control/agents/agent-go.md` 和 `.ai-control/control/docs/stacks/GO_GIN.md`。
+- 涉及 PHP 后端实现，读 PHP 后端开发工程师 `.ai-control/control/agents/agent-php.md` 和 `.ai-control/control/docs/stacks/PHP.md`。
+- 涉及 Vue/React 前端实现，读 Web 前端开发工程师 `.ai-control/control/agents/agent-web.md` 和对应 `.ai-control/control/docs/stacks/VUE3.md` 或 `.ai-control/control/docs/stacks/REACT.md`。
+- 涉及 JWT 登录、token、登出或会话安全，读 `.ai-control/control/docs/features/JWT_RULES.md`。
+- 涉及后台菜单、按钮、接口权限或数据范围，读 `.ai-control/control/docs/features/RBAC_RULES.md`。
 - 实现后必须执行验证，或说明无法验证原因。
-- 交付前必须读发布审查工程师 `control/agents/agent-release.md`。
+- 交付前必须读发布审查工程师 `.ai-control/control/agents/agent-release.md`。
 
 ## 编码前必须行为
-1. 阅读 `AGENTS.md`、相关 `control/docs/` 和相关 OpenSpec specs/changes。
-2. 阅读 `control/CONTEXT.md` 或 `control/CONTEXT-MAP.md`，使用项目领域语言。
+1. 阅读 `AGENTS.md`、相关 `.ai-control/control/docs/` 和相关 OpenSpec specs/changes。
+2. 阅读 `CONTEXT.md` 或 `CONTEXT-MAP.md`，使用项目领域语言。
 3. 阅读相关 ADR，避免重复争论已确认决策。
 4. 阅读既有项目结构。
 5. 优先遵循既有代码风格和设计系统。
@@ -161,7 +161,7 @@ control/openspec/changes/<change-id>/
 - 禁止执行全表 UPDATE/DELETE。
 - JOIN 查询必须确认主表粒度、表关系基数和 `ON` / `USING` 条件，禁止无条件 JOIN 或用 `DISTINCT` / `GROUP BY` 掩盖笛卡尔乘积与重复数据问题。
 - 必须考虑租户隔离、软删除、索引和排序规则一致性。
-- 创建或修改表时，必须遵循 `control/docs/DB_SCHEMA_RULES.md`。
+- 创建或修改表时，必须遵循 `.ai-control/control/docs/DB_SCHEMA_RULES.md`。
 
 ## 必须澄清的触发条件
 如果以下任一内容不清楚，必须 STOP and ASK：

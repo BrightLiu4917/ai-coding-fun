@@ -21,49 +21,39 @@ Codex App + OpenSpec + deepv4
 ```text
 OpenSpec = 产品、业务、需求、规格、变更和归档事实源
 AGENTS.md = 总调度器，定义安全红线和高层入口
-agents/ = 普通 Markdown 工程手册，按工种命名
-docs/common = 跨技术栈项目适配规则
-docs/stacks = Spring Boot、Vue3、React、Go、PHP 技术栈规则
-docs/features = JWT、RBAC、CRUD、OpenAPI 功能规则
-scripts/ = 安装、检查、测试、deepv4 二审
-templates/ = 标准产物模板
-tools/ = 确定性工具，例如 CRUD 预览生成器
-examples/ = 落地示例
+control/ = 控制系统资产目录
+control/agents/ = 普通 Markdown 工程手册，按工种命名
+control/docs/common = 跨技术栈项目适配规则
+control/docs/stacks = Spring Boot、Vue3、React、Go、PHP 技术栈规则
+control/docs/features = JWT、RBAC、CRUD、OpenAPI 功能规则
+control/scripts/ = 安装、检查、测试、deepv4 二审
+control/templates/ = 标准产物模板
+control/tools/ = 确定性工具，例如 CRUD 预览生成器
+control/examples/ = 落地示例
 ```
 
-## 推荐目录
+## 仓库目录
 
 ```text
 .
 ├── AGENTS.md
-├── CODEX_TASK_TEMPLATE.md
-├── .ai-control/
-├── CONTEXT.md
-├── CONTEXT-MAP.md
-├── openspec/
-├── agents/
-│   ├── agent-product.md
-│   ├── agent-openspec.md
-│   ├── agent-architect.md
-│   ├── agent-ui.md
-│   ├── agent-web.md
-│   ├── agent-api.md
-│   ├── agent-java.md
-│   ├── agent-go.md
-│   ├── agent-php.md
-│   ├── agent-dba.md
-│   ├── agent-codegen.md
-│   ├── agent-test.md
-│   ├── agent-security.md
-│   ├── agent-performance.md
-│   └── agent-release.md
-├── docs/
-├── scripts/
-├── templates/
-├── tools/
-├── profiles/
-└── examples/
+├── README.md
+├── control/
+│   ├── CODEX_TASK_TEMPLATE.md
+│   ├── CONTEXT.md
+│   ├── CONTEXT-MAP.md
+│   ├── openspec/
+│   ├── agents/
+│   ├── docs/
+│   ├── scripts/
+│   ├── templates/
+│   ├── tools/
+│   ├── profiles/
+│   └── examples/
+└── .agent/
 ```
+
+根目录 `AGENTS.md` 是 Codex 自动发现入口，`README.md` 是人工入口。控制系统自身资产统一放在 `control/` 下。本仓库结构调整不等于目标业务项目安装输出结构调整。
 
 ## Agent 分工
 
@@ -132,7 +122,7 @@ OpenSpec 规格工程师（agent-openspec）
 CRUD 代码生成必须先走代码生成工程师（`agent-codegen`）判断 adapter。generic adapter 只生成审查预览包，不直接写入业务源码目录。
 
 ```bash
-bash tools/codegen/java-springboot-crud-adapters/generic/scripts/crud-preview --help
+bash control/tools/codegen/java-springboot-crud-adapters/generic/scripts/crud-preview --help
 ```
 
 真实落地业务代码必须经用户确认后转入 Java 后端开发工程师（`agent-java`）做生产级实现。
@@ -142,9 +132,9 @@ bash tools/codegen/java-springboot-crud-adapters/generic/scripts/crud-preview --
 ```text
 OpenSpec 已确认
 -> Codex 实现最小任务切片
--> scripts/run-tests.sh
--> scripts/prepare-deepv4-review.sh
--> scripts/run-deepv4-review.sh
+-> control/scripts/run-tests.sh
+-> control/scripts/prepare-deepv4-review.sh
+-> control/scripts/run-deepv4-review.sh
 -> 发布审查工程师（agent-release）
 ```
 
@@ -155,22 +145,22 @@ deepv4 只做独立二审，不直接修改代码，也不能替代 OpenSpec 或
 交互式安装：
 
 ```bash
-bash scripts/setup-control-system.sh
+bash control/scripts/setup-control-system.sh
 ```
 
 非交互式安装：
 
 ```bash
-bash scripts/bootstrap-new-project.sh --project-dir /path/to/project --profile auto --deepv4
+bash control/scripts/bootstrap-new-project.sh --project-dir /path/to/project --profile auto --deepv4
 ```
 
 直接安装：
 
 ```bash
-bash scripts/install-to-project.sh --dry-run --profile default /path/to/project
-bash scripts/install-to-project.sh --backup --profile default /path/to/project
-bash scripts/install-to-project.sh --backup --profile fullstack-admin /path/to/project
-bash scripts/install-to-project.sh --backup --profile gupo /path/to/gupo-project
+bash control/scripts/install-to-project.sh --dry-run --profile default /path/to/project
+bash control/scripts/install-to-project.sh --backup --profile default /path/to/project
+bash control/scripts/install-to-project.sh --backup --profile fullstack-admin /path/to/project
+bash control/scripts/install-to-project.sh --backup --profile gupo /path/to/gupo-project
 ```
 
 ## 小白模式
@@ -178,13 +168,13 @@ bash scripts/install-to-project.sh --backup --profile gupo /path/to/gupo-project
 目标项目安装完成后，优先使用统一入口：
 
 ```bash
-bash scripts/ai-dev.sh init
-bash scripts/ai-dev.sh feature login-jwt
-bash scripts/ai-dev.sh feature login-jwt --force
-bash scripts/ai-dev.sh ready login-jwt
-bash scripts/ai-dev.sh test
-bash scripts/ai-dev.sh review
-bash scripts/ai-dev.sh next
+bash .ai-control/control/scripts/ai-dev.sh init
+bash .ai-control/control/scripts/ai-dev.sh feature login-jwt
+bash .ai-control/control/scripts/ai-dev.sh feature login-jwt --force
+bash .ai-control/control/scripts/ai-dev.sh ready login-jwt
+bash .ai-control/control/scripts/ai-dev.sh test
+bash .ai-control/control/scripts/ai-dev.sh review
+bash .ai-control/control/scripts/ai-dev.sh next
 ```
 
 `ai-dev.sh` 会把底层 OpenSpec、测试和 deepv4 命令串起来，并输出下一步该复制给 Codex 的提示。
@@ -200,40 +190,40 @@ bash scripts/ai-dev.sh next
 ## 自动检查
 
 ```bash
-bash scripts/ai-dev.sh next
-bash scripts/detect-project-profile.sh --write
-bash scripts/check-project-ready.sh
-bash scripts/agent-check.sh
-bash scripts/route-check.sh
-bash scripts/docs-link-check.sh
-bash scripts/openspec-check.sh openspec/changes/<change-id>
-bash scripts/impact-check.sh openspec/changes/<change-id>
-bash scripts/route-compliance-check.sh openspec/changes/<change-id>
-bash scripts/openspec-conflict-check.sh
-bash scripts/run-tests.sh
+bash control/scripts/ai-dev.sh next
+bash control/scripts/detect-project-profile.sh --write
+bash control/scripts/check-project-ready.sh
+bash control/scripts/agent-check.sh
+bash control/scripts/route-check.sh
+bash control/scripts/docs-link-check.sh
+bash control/scripts/openspec-check.sh control/openspec/changes/<change-id>
+bash control/scripts/impact-check.sh control/openspec/changes/<change-id>
+bash control/scripts/route-compliance-check.sh control/openspec/changes/<change-id>
+bash control/scripts/openspec-conflict-check.sh
+bash control/scripts/run-tests.sh
 ```
 
 新增 agent：
 
 ```bash
-bash scripts/new-agent.sh agent-go "Go 后端开发工程师" "Go 后端实现手册，用于 Gin/GORM 项目..."
+bash control/scripts/new-agent.sh agent-go "Go 后端开发工程师" "Go 后端实现手册，用于 Gin/GORM 项目..."
 ```
 
 ## 中文文档
 
-- [使用手册](docs/使用手册.md)
-- [快速开始](docs/快速开始.md)
-- [不同项目如何接入](docs/不同项目如何接入.md)
-- [Codex 如何提需求](docs/Codex如何提需求.md)
-- [deepv4 二审使用说明](docs/deepv4二审使用说明.md)
-- [流程图](docs/流程图.md)
-- [环境依赖](docs/环境依赖.md)
-- [新项目快速接入](docs/新项目快速接入.md)
+- [使用手册](control/docs/使用手册.md)
+- [快速开始](control/docs/快速开始.md)
+- [不同项目如何接入](control/docs/不同项目如何接入.md)
+- [Codex 如何提需求](control/docs/Codex如何提需求.md)
+- [deepv4 二审使用说明](control/docs/deepv4二审使用说明.md)
+- [流程图](control/docs/流程图.md)
+- [环境依赖](control/docs/环境依赖.md)
+- [新项目快速接入](control/docs/新项目快速接入.md)
 
 ## 核心原则
 
 - OpenSpec 管事实源。
-- `agents/` 管工程分工。
+- `control/agents/` 管工程分工。
 - 不清楚就停止并询问。
 - 非简单任务先进入 OpenSpec。
 - 数据库写操作必须确认。

@@ -1,0 +1,497 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PROJECT_ROOT=""
+BASE_PACKAGE=""
+MODULE_PATH="."
+ENTITY_NAME=""
+TABLE_NAME=""
+ROUTE_PATH=""
+DISPLAY_NAME=""
+FIELDS=""
+OUTPUT_DIR=""
+WRITE=0
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  bash .ai-control/control/tools/codegen/java-springboot-crud-adapters/generic/scripts/crud-preview \
+    --project-root /path/to/project \
+    --base-package com.example.demo \
+    --entity-name Supplier \
+    --table-name supplier \
+    --route-path /api/admin/v1/supplier/page \
+    --display-name 供应商 \
+    --fields 'pk_id:Long:内部主键,name:String:名称,status:String:状态' \
+    [--module-path api] \
+    [--output-dir .agent/codegen-preview] \
+    [--write]
+
+默认只打印预览。使用 --write 时会把审查草稿写入
+<project-root>/<output-dir>/<entity-name>/，不会直接写入 src/main。
+USAGE
+}
+
+fail() {
+  printf '[FAIL] %s\n' "$*" >&2
+  exit 2
+}
+
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    --project-root) PROJECT_ROOT="${2:-}"; shift 2 ;;
+    --base-package) BASE_PACKAGE="${2:-}"; shift 2 ;;
+    --module-path) MODULE_PATH="${2:-}"; shift 2 ;;
+    --entity-name) ENTITY_NAME="${2:-}"; shift 2 ;;
+    --table-name) TABLE_NAME="${2:-}"; shift 2 ;;
+    --route-path) ROUTE_PATH="${2:-}"; shift 2 ;;
+    --display-name) DISPLAY_NAME="${2:-}"; shift 2 ;;
+    --fields) FIELDS="${2:-}"; shift 2 ;;
+    --output-dir) OUTPUT_DIR="${2:-}"; shift 2 ;;
+    --write) WRITE=1; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) fail "Unknown option: $1" ;;
+  esac
+done
+
+[[ -n "$PROJECT_ROOT" ]] || fail "--project-root is required"
+[[ -d "$PROJECT_ROOT" ]] || fail "Project root does not exist: $PROJECT_ROOT"
+[[ -n "$BASE_PACKAGE" ]] || fail "--base-package is required"
+[[ -n "$ENTITY_NAME" ]] || fail "--entity-name is required"
+[[ -n "$TABLE_NAME" ]] || fail "--table-name is required"
+[[ -n "$ROUTE_PATH" ]] || fail "--route-path is required"
+[[ -n "$DISPLAY_NAME" ]] || fail "--display-name is required"
+[[ -n "$FIELDS" ]] || fail "--fields is required"
+
+case "$ENTITY_NAME" in
+  *[!A-Za-z0-9_]*|'') fail "--entity-name must be a Java identifier-like name" ;;
+esac
+
+if [[ "$ROUTE_PATH" != /* ]]; then
+  fail "--route-path must start with /"
+fi
+
+OUTPUT_DIR="${OUTPUT_DIR:-.agent/codegen-preview}"
+PACKAGE_PATH="$(printf '%s' "$BASE_PACKAGE" | tr '.' '/')"
+LOWER_ENTITY="$(printf '%s' "$ENTITY_NAME" | awk '{ print tolower(substr($0,1,1)) substr($0,2) }')"
+TARGET_ROOT="$PROJECT_ROOT/$OUTPUT_DIR/$ENTITY_NAME"
+
+JAVA_BASE="$MODULE_PATH/src/main/java/$PACKAGE_PATH"
+XML_BASE="$MODULE_PATH/src/main/resources/mapper"
+
+planned_files=(
+  "$TARGET_ROOT/$JAVA_BASE/domain/$ENTITY_NAME.java"
+  "$TARGET_ROOT/$JAVA_BASE/dto/${ENTITY_NAME}CreateRequest.java"
+  "$TARGET_ROOT/$JAVA_BASE/dto/${ENTITY_NAME}UpdateRequest.java"
+  "$TARGET_ROOT/$JAVA_BASE/dto/${ENTITY_NAME}DeleteRequest.java"
+  "$TARGET_ROOT/$JAVA_BASE/dto/${ENTITY_NAME}BatchDeleteRequest.java"
+  "$TARGET_ROOT/$JAVA_BASE/vo/${ENTITY_NAME}VO.java"
+  "$TARGET_ROOT/$JAVA_BASE/mapper/${ENTITY_NAME}Mapper.java"
+  "$TARGET_ROOT/$XML_BASE/${ENTITY_NAME}Mapper.xml"
+  "$TARGET_ROOT/$JAVA_BASE/service/${ENTITY_NAME}Service.java"
+  "$TARGET_ROOT/$JAVA_BASE/service/impl/${ENTITY_NAME}ServiceImpl.java"
+  "$TARGET_ROOT/$JAVA_BASE/controller/${ENTITY_NAME}Controller.java"
+  "$TARGET_ROOT/REVIEW.md"
+)
+
+printf '通用 CRUD 预览 adapter\n'
+printf 'Project root: %s\n' "$PROJECT_ROOT"
+printf '模式: %s\n' "$([[ "$WRITE" -eq 1 ]] && printf write || printf preview)"
+printf '输出目录: %s\n' "$TARGET_ROOT"
+printf '是否写入业务源码: 否\n'
+printf '\n计划生成的审查草稿文件:\n'
+printf '  - %s\n' "${planned_files[@]}"
+
+if [[ "$WRITE" -ne 1 ]]; then
+  printf '\n未写入文件。需要生成审查草稿时，追加 --write。\n'
+  exit 0
+fi
+
+mkdir -p \
+  "$TARGET_ROOT/$JAVA_BASE/domain" \
+  "$TARGET_ROOT/$JAVA_BASE/dto" \
+  "$TARGET_ROOT/$JAVA_BASE/vo" \
+  "$TARGET_ROOT/$JAVA_BASE/mapper" \
+  "$TARGET_ROOT/$JAVA_BASE/service/impl" \
+  "$TARGET_ROOT/$JAVA_BASE/controller" \
+  "$TARGET_ROOT/$XML_BASE"
+
+to_camel() {
+  awk -v input="$1" 'BEGIN {
+    n = split(input, parts, "_")
+    out=parts[1]
+    for (i=2; i<=n; i++) {
+      out = out toupper(substr(parts[i],1,1)) substr(parts[i],2)
+    }
+    print out
+  }'
+}
+
+is_primary_field() {
+  case "$1" in
+    id|pk_id|pkId) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+java_field_name() {
+  local column="$1"
+  case "$column" in
+    pk_id) printf 'pkId' ;;
+    *) to_camel "$column" ;;
+  esac
+}
+
+entity_field_lines=""
+api_field_lines=""
+create_dto_lines=""
+xml_insert_columns=""
+xml_insert_values=""
+xml_select_columns=""
+PRIMARY_COLUMN=""
+PRIMARY_JAVA_FIELD=""
+api_id_generated=0
+while IFS= read -r field; do
+  [[ -n "$field" ]] || continue
+  IFS=':' read -r name type comment <<<"$field"
+  [[ -n "${name:-}" && -n "${type:-}" ]] || fail "Invalid field item: $field"
+  java_name="$(java_field_name "$name")"
+  if is_primary_field "$name"; then
+    if [[ -z "$PRIMARY_COLUMN" ]]; then
+      PRIMARY_COLUMN="$name"
+      PRIMARY_JAVA_FIELD="$java_name"
+    fi
+  fi
+
+  entity_field_lines+="    /** ${comment:-$name} */"$'\n'
+  entity_field_lines+="    private $type $java_name;"$'\n\n'
+
+  if is_primary_field "$name"; then
+    if [[ "$api_id_generated" -eq 0 ]]; then
+      api_field_lines+="    /** 对外 API ID，前端必须按字符串处理，禁止转 Number */"$'\n'
+      api_field_lines+="    private String id;"$'\n\n'
+      api_id_generated=1
+    fi
+  else
+    api_field_lines+="    /** ${comment:-$name} */"$'\n'
+    api_field_lines+="    private $type $java_name;"$'\n\n'
+    create_dto_lines+="    /** ${comment:-$name} */"$'\n'
+    create_dto_lines+="    private $type $java_name;"$'\n\n'
+    xml_insert_columns+="        $name,"$'\n'
+    xml_insert_values+="        #{$java_name},"$'\n'
+  fi
+  xml_select_columns+="        $name,"$'\n'
+done < <(printf '%s' "$FIELDS" | tr ',' '\n')
+
+[[ -n "$PRIMARY_COLUMN" ]] || fail "--fields must include primary field id, pk_id, or pkId"
+
+cat > "$TARGET_ROOT/$JAVA_BASE/domain/$ENTITY_NAME.java" <<EOF
+package $BASE_PACKAGE.domain;
+
+import lombok.Data;
+
+/**
+ * ${DISPLAY_NAME}。
+ * 审查草稿：使用前必须确认字段、注解和持久化规则。
+ */
+@Data
+public class $ENTITY_NAME {
+$entity_field_lines}
+EOF
+
+cat > "$TARGET_ROOT/$JAVA_BASE/dto/${ENTITY_NAME}CreateRequest.java" <<EOF
+package $BASE_PACKAGE.dto;
+
+import lombok.Data;
+
+/**
+ * ${DISPLAY_NAME}创建请求。
+ */
+@Data
+public class ${ENTITY_NAME}CreateRequest {
+$create_dto_lines}
+EOF
+
+cat > "$TARGET_ROOT/$JAVA_BASE/dto/${ENTITY_NAME}UpdateRequest.java" <<EOF
+package $BASE_PACKAGE.dto;
+
+import lombok.Data;
+
+/**
+ * ${DISPLAY_NAME}更新请求。
+ */
+@Data
+public class ${ENTITY_NAME}UpdateRequest {
+    /** 对外 API ID，前端必须按字符串传递，禁止转 Number */
+    private String id;
+
+$create_dto_lines}
+EOF
+
+cat > "$TARGET_ROOT/$JAVA_BASE/dto/${ENTITY_NAME}DeleteRequest.java" <<EOF
+package $BASE_PACKAGE.dto;
+
+import lombok.Data;
+
+/**
+ * ${DISPLAY_NAME}删除请求。
+ */
+@Data
+public class ${ENTITY_NAME}DeleteRequest {
+    /** 对外 API ID，前端必须按字符串传递，禁止转 Number */
+    private String id;
+}
+EOF
+
+cat > "$TARGET_ROOT/$JAVA_BASE/dto/${ENTITY_NAME}BatchDeleteRequest.java" <<EOF
+package $BASE_PACKAGE.dto;
+
+import java.util.List;
+import lombok.Data;
+
+/**
+ * ${DISPLAY_NAME}批量删除请求。
+ */
+@Data
+public class ${ENTITY_NAME}BatchDeleteRequest {
+    /** 对外 API ID 列表，前端必须按字符串传递，禁止转 Number */
+    private List<String> idList;
+}
+EOF
+
+cat > "$TARGET_ROOT/$JAVA_BASE/vo/${ENTITY_NAME}VO.java" <<EOF
+package $BASE_PACKAGE.vo;
+
+import lombok.Data;
+
+/**
+ * ${DISPLAY_NAME}响应对象。
+ */
+@Data
+public class ${ENTITY_NAME}VO {
+$api_field_lines}
+EOF
+
+cat > "$TARGET_ROOT/$JAVA_BASE/mapper/${ENTITY_NAME}Mapper.java" <<EOF
+package $BASE_PACKAGE.mapper;
+
+import $BASE_PACKAGE.domain.$ENTITY_NAME;
+import java.util.List;
+import org.apache.ibatis.annotations.Param;
+
+public interface ${ENTITY_NAME}Mapper {
+    int insert($ENTITY_NAME entity);
+
+    int updateByPkId($ENTITY_NAME entity);
+
+    $ENTITY_NAME selectByPkId(@Param("pkId") Long pkId);
+
+    int deleteByPkId(@Param("pkId") Long pkId);
+
+    int deleteByPkIds(@Param("pkIdList") List<Long> pkIdList);
+
+    List<$ENTITY_NAME> selectPage();
+}
+EOF
+
+cat > "$TARGET_ROOT/$XML_BASE/${ENTITY_NAME}Mapper.xml" <<EOF
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="$BASE_PACKAGE.mapper.${ENTITY_NAME}Mapper">
+  <!-- 审查草稿。使用前必须确认字段、动态 SQL、租户范围、软删除和排序。 -->
+  <insert id="insert" parameterType="$BASE_PACKAGE.domain.$ENTITY_NAME">
+    INSERT INTO $TABLE_NAME (
+$(printf '%s' "$xml_insert_columns" | sed '$ s/,$//')
+    ) VALUES (
+$(printf '%s' "$xml_insert_values" | sed '$ s/,$//')
+    )
+  </insert>
+
+  <select id="selectByPkId" resultType="$BASE_PACKAGE.domain.$ENTITY_NAME">
+    SELECT
+$(printf '%s' "$xml_select_columns" | sed '$ s/,$//')
+    FROM $TABLE_NAME
+    WHERE $PRIMARY_COLUMN = #{pkId}
+  </select>
+
+  <delete id="deleteByPkId">
+    DELETE FROM $TABLE_NAME
+    WHERE $PRIMARY_COLUMN = #{pkId}
+  </delete>
+
+  <delete id="deleteByPkIds">
+    DELETE FROM $TABLE_NAME
+    WHERE $PRIMARY_COLUMN IN
+    <foreach collection="pkIdList" item="pkId" open="(" separator="," close=")">
+      #{pkId}
+    </foreach>
+  </delete>
+</mapper>
+EOF
+
+cat > "$TARGET_ROOT/$JAVA_BASE/service/${ENTITY_NAME}Service.java" <<EOF
+package $BASE_PACKAGE.service;
+
+import $BASE_PACKAGE.dto.${ENTITY_NAME}BatchDeleteRequest;
+import $BASE_PACKAGE.dto.${ENTITY_NAME}CreateRequest;
+import $BASE_PACKAGE.dto.${ENTITY_NAME}DeleteRequest;
+import $BASE_PACKAGE.dto.${ENTITY_NAME}UpdateRequest;
+import $BASE_PACKAGE.vo.${ENTITY_NAME}VO;
+
+public interface ${ENTITY_NAME}Service {
+    ${ENTITY_NAME}VO create(${ENTITY_NAME}CreateRequest request);
+
+    ${ENTITY_NAME}VO update(${ENTITY_NAME}UpdateRequest request);
+
+    ${ENTITY_NAME}VO detail(String id);
+
+    boolean delete(${ENTITY_NAME}DeleteRequest request);
+
+    boolean batchDelete(${ENTITY_NAME}BatchDeleteRequest request);
+}
+EOF
+
+cat > "$TARGET_ROOT/$JAVA_BASE/service/impl/${ENTITY_NAME}ServiceImpl.java" <<EOF
+package $BASE_PACKAGE.service.impl;
+
+import $BASE_PACKAGE.dto.${ENTITY_NAME}BatchDeleteRequest;
+import $BASE_PACKAGE.dto.${ENTITY_NAME}CreateRequest;
+import $BASE_PACKAGE.dto.${ENTITY_NAME}DeleteRequest;
+import $BASE_PACKAGE.dto.${ENTITY_NAME}UpdateRequest;
+import $BASE_PACKAGE.service.${ENTITY_NAME}Service;
+import $BASE_PACKAGE.vo.${ENTITY_NAME}VO;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+public class ${ENTITY_NAME}ServiceImpl implements ${ENTITY_NAME}Service {
+    @Override
+    public ${ENTITY_NAME}VO create(${ENTITY_NAME}CreateRequest request) {
+        throw new UnsupportedOperationException("审查草稿。请在业务规则确认后实现。");
+    }
+
+    @Override
+    public ${ENTITY_NAME}VO update(${ENTITY_NAME}UpdateRequest request) {
+        parseApiIdOrThrow(request == null ? null : request.getId());
+        throw new UnsupportedOperationException("审查草稿。请在业务规则确认后实现。");
+    }
+
+    @Override
+    public ${ENTITY_NAME}VO detail(String id) {
+        parseApiIdOrThrow(id);
+        throw new UnsupportedOperationException("审查草稿。请在业务规则确认后实现。");
+    }
+
+    @Override
+    public boolean delete(${ENTITY_NAME}DeleteRequest request) {
+        parseApiIdOrThrow(request == null ? null : request.getId());
+        throw new UnsupportedOperationException("审查草稿。请在业务规则确认后实现。");
+    }
+
+    @Override
+    public boolean batchDelete(${ENTITY_NAME}BatchDeleteRequest request) {
+        parseApiIdListOrThrow(request == null ? null : request.getIdList());
+        throw new UnsupportedOperationException("审查草稿。请在业务规则确认后实现。");
+    }
+
+    private Long parseApiIdOrThrow(String id) {
+        if (id == null || id.isBlank()) {
+            throw new IllegalArgumentException("${DISPLAY_NAME}ID参数错误");
+        }
+        try {
+            long value = Long.parseLong(id);
+            if (value <= 0) {
+                throw new IllegalArgumentException("${DISPLAY_NAME}ID参数错误");
+            }
+            return value;
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException("${DISPLAY_NAME}ID参数错误", ex);
+        }
+    }
+
+    private List<Long> parseApiIdListOrThrow(List<String> idList) {
+        if (idList == null || idList.isEmpty()) {
+            throw new IllegalArgumentException("${DISPLAY_NAME}ID列表参数错误");
+        }
+        List<Long> pkIdList = new ArrayList<>();
+        Set<Long> seen = new HashSet<>();
+        for (String id : idList) {
+            Long pkId = parseApiIdOrThrow(id);
+            if (!seen.add(pkId)) {
+                throw new IllegalArgumentException("${DISPLAY_NAME}ID列表参数错误");
+            }
+            pkIdList.add(pkId);
+        }
+        return pkIdList;
+    }
+}
+EOF
+
+cat > "$TARGET_ROOT/$JAVA_BASE/controller/${ENTITY_NAME}Controller.java" <<EOF
+package $BASE_PACKAGE.controller;
+
+import $BASE_PACKAGE.dto.${ENTITY_NAME}BatchDeleteRequest;
+import $BASE_PACKAGE.dto.${ENTITY_NAME}CreateRequest;
+import $BASE_PACKAGE.dto.${ENTITY_NAME}DeleteRequest;
+import $BASE_PACKAGE.dto.${ENTITY_NAME}UpdateRequest;
+import $BASE_PACKAGE.service.${ENTITY_NAME}Service;
+import $BASE_PACKAGE.vo.${ENTITY_NAME}VO;
+
+public class ${ENTITY_NAME}Controller {
+    private final ${ENTITY_NAME}Service ${LOWER_ENTITY}Service;
+
+    public ${ENTITY_NAME}Controller(${ENTITY_NAME}Service ${LOWER_ENTITY}Service) {
+        this.${LOWER_ENTITY}Service = ${LOWER_ENTITY}Service;
+    }
+
+    public ${ENTITY_NAME}VO create(${ENTITY_NAME}CreateRequest request) {
+        return ${LOWER_ENTITY}Service.create(request);
+    }
+
+    public ${ENTITY_NAME}VO update(${ENTITY_NAME}UpdateRequest request) {
+        return ${LOWER_ENTITY}Service.update(request);
+    }
+
+    public ${ENTITY_NAME}VO detail(String id) {
+        return ${LOWER_ENTITY}Service.detail(id);
+    }
+
+    public boolean delete(${ENTITY_NAME}DeleteRequest request) {
+        return ${LOWER_ENTITY}Service.delete(request);
+    }
+
+    public boolean batchDelete(${ENTITY_NAME}BatchDeleteRequest request) {
+        return ${LOWER_ENTITY}Service.batchDelete(request);
+    }
+}
+EOF
+
+cat > "$TARGET_ROOT/REVIEW.md" <<EOF
+# $ENTITY_NAME CRUD 草稿审查
+
+本目录由通用 preview-only adapter 生成，只用于审查，不是可直接落地的业务代码。
+
+## 落地前必须确认
+- 数据库表、字段、索引、租户规则和软删除规则。
+- API 路径、方法、请求、响应、错误码和分页契约。
+- 权限规则和审计要求。
+- 既有项目响应包装、异常策略、事务策略和包结构约定。
+- 测试计划和回滚方案。
+
+## 重要说明
+这些文件是审查草稿，刻意写入 \`$OUTPUT_DIR\`，不会写入业务源码目录。
+
+## ID 和异常约定
+- 数据库主键列名按真实表结构处理，但不得作为 API 字段暴露。
+- 对外 API 入参和出参统一使用 \`id\` / \`idList\`。
+- 禁止暴露内部主键字段名、内部主键 Java 字段名或内部批量主键字段名。
+- 前端必须把长整型 ID 当字符串处理，禁止 \`Number(id)\`、一元加号、隐式数值计算或 JSON 数字化。
+- 后端收到 \`id\` 字符串后再校验并转换为 \`Long\`。
+- \`id\` 为空、非数字、非正数或越界时返回参数错误。
+- \`idList\` 为空、包含非法 ID 或重复 ID 时返回参数错误。
+- 查询不到数据时返回业务不存在，不允许变成 500。
+EOF
+
+printf '\n[WRITE] 审查草稿已生成: %s\n' "$TARGET_ROOT"
