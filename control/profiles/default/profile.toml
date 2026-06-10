@@ -3,7 +3,6 @@ description = "安装 AI 全栈控制系统通用资产，不包含公司专用 
 items = [
   "AGENTS.md",
   "CODEX_TASK_TEMPLATE.md",
-  "README.md",
   "CONTEXT.md",
   "CONTEXT-MAP.md",
   "openspec",

@@ -3,7 +3,6 @@ description = "面向前后端一体后台管理项目，包含 OpenSpec、中�
 items = [
   "AGENTS.md",
   "CODEX_TASK_TEMPLATE.md",
-  "README.md",
   "CONTEXT.md",
   "CONTEXT-MAP.md",
   "openspec",

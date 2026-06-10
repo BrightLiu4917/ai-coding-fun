@@ -3,7 +3,6 @@ description = "面向 Vue3 管理端项目，包含 OpenSpec、Web 前端、UI�
 items = [
   "AGENTS.md",
   "CODEX_TASK_TEMPLATE.md",
-  "README.md",
   "CONTEXT.md",
   "CONTEXT-MAP.md",
   "openspec",

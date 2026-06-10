@@ -3,7 +3,6 @@ description = "安装通用控制系统资产，并包含 gupo Java Spring Boot 
 items = [
   "AGENTS.md",
   "CODEX_TASK_TEMPLATE.md",
-  "README.md",
   "CONTEXT.md",
   "CONTEXT-MAP.md",
   "openspec",
