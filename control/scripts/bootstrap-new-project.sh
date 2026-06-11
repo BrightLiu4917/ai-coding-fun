@@ -78,19 +78,24 @@ detect_test_command() {
     local dir="$1"
     local package_file="$project_dir/$dir/package.json"
     local runner="npm"
+    local install_command="npm install"
 
     [[ -f "$package_file" ]] || return 0
 
     if [[ -f "$project_dir/$dir/pnpm-lock.yaml" ]]; then
       runner="pnpm"
+      install_command="pnpm install --frozen-lockfile"
     elif [[ -f "$project_dir/$dir/yarn.lock" ]]; then
       runner="yarn"
+      install_command="yarn install --frozen-lockfile"
+    elif [[ -f "$project_dir/$dir/package-lock.json" ]]; then
+      install_command="npm ci"
     fi
 
     if grep -Eq '"build"[[:space:]]*:' "$package_file"; then
-      printf 'cd %s && %s run build\n' "$dir" "$runner"
+      printf 'cd %s && %s && %s run build\n' "$dir" "$install_command" "$runner"
     elif grep -Eq '"test"[[:space:]]*:' "$package_file"; then
-      printf 'cd %s && %s test\n' "$dir" "$runner"
+      printf 'cd %s && %s && %s test\n' "$dir" "$install_command" "$runner"
     fi
   }
 

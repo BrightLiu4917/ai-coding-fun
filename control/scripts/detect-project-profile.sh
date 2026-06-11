@@ -27,13 +27,25 @@ fail() {
 
 contains_file() {
   local pattern="$1"
-  find "$TARGET_ROOT" -maxdepth 4 -name "$pattern" -print -quit 2>/dev/null | grep -q .
+  find "$TARGET_ROOT" \
+    -path "$TARGET_ROOT/.ai-control" -prune -o \
+    -path "$TARGET_ROOT/.agent" -prune -o \
+    -path "$TARGET_ROOT/.idea" -prune -o \
+    -path "*/node_modules" -prune -o \
+    -path "*/vendor" -prune -o \
+    -path "*/target" -prune -o \
+    -path "*/dist" -prune -o \
+    -maxdepth 4 \
+    -name "$pattern" -print -quit 2>/dev/null | grep -q .
 }
 
 grep_project() {
   local pattern="$1"
   find "$TARGET_ROOT" \
     -path "$TARGET_ROOT/.git" -prune -o \
+    -path "$TARGET_ROOT/.ai-control" -prune -o \
+    -path "$TARGET_ROOT/.agent" -prune -o \
+    -path "$TARGET_ROOT/.idea" -prune -o \
     -path "*/node_modules" -prune -o \
     -path "*/vendor" -prune -o \
     -path "*/target" -prune -o \
@@ -54,7 +66,16 @@ first_dir_with_file() {
   done
 
   local found
-  found="$(find "$TARGET_ROOT" -maxdepth 3 -name "$file_name" -print -quit 2>/dev/null || true)"
+  found="$(find "$TARGET_ROOT" \
+    -path "$TARGET_ROOT/.ai-control" -prune -o \
+    -path "$TARGET_ROOT/.agent" -prune -o \
+    -path "$TARGET_ROOT/.idea" -prune -o \
+    -path "*/node_modules" -prune -o \
+    -path "*/vendor" -prune -o \
+    -path "*/target" -prune -o \
+    -path "*/dist" -prune -o \
+    -maxdepth 3 \
+    -name "$file_name" -print -quit 2>/dev/null || true)"
   if [[ -n "$found" ]]; then
     dirname "${found#$TARGET_ROOT/}"
   fi
@@ -84,6 +105,7 @@ detect_test_command() {
   local package_manager="$3"
   local backend_test=""
   local frontend_test=""
+  local frontend_install=""
 
   if [[ -n "$backend_dir" && -f "$TARGET_ROOT/$backend_dir/pom.xml" ]]; then
     if [[ -x "$TARGET_ROOT/$backend_dir/mvnw" ]]; then
@@ -104,16 +126,46 @@ detect_test_command() {
   fi
 
   if [[ -n "$frontend_dir" && -f "$TARGET_ROOT/$frontend_dir/package.json" ]]; then
+    case "$package_manager" in
+      pnpm)
+        frontend_install="pnpm install --frozen-lockfile"
+        ;;
+      yarn)
+        frontend_install="yarn install --frozen-lockfile"
+        ;;
+      npm)
+        if [[ -f "$TARGET_ROOT/$frontend_dir/package-lock.json" ]]; then
+          frontend_install="npm ci"
+        else
+          frontend_install="npm install"
+        fi
+        ;;
+    esac
     if grep -Eq '"build"[[:space:]]*:' "$TARGET_ROOT/$frontend_dir/package.json"; then
-      frontend_test="cd $frontend_dir && $package_manager run build"
+      frontend_test="cd $frontend_dir && $frontend_install && $package_manager run build"
     elif grep -Eq '"test"[[:space:]]*:' "$TARGET_ROOT/$frontend_dir/package.json"; then
-      frontend_test="cd $frontend_dir && $package_manager test"
+      frontend_test="cd $frontend_dir && $frontend_install && $package_manager test"
     fi
   elif [[ -f "$TARGET_ROOT/package.json" ]]; then
+    case "$package_manager" in
+      pnpm)
+        frontend_install="pnpm install --frozen-lockfile"
+        ;;
+      yarn)
+        frontend_install="yarn install --frozen-lockfile"
+        ;;
+      npm)
+        if [[ -f "$TARGET_ROOT/package-lock.json" ]]; then
+          frontend_install="npm ci"
+        else
+          frontend_install="npm install"
+        fi
+        ;;
+    esac
     if grep -Eq '"build"[[:space:]]*:' "$TARGET_ROOT/package.json"; then
-      frontend_test="$package_manager run build"
+      frontend_test="$frontend_install && $package_manager run build"
     elif grep -Eq '"test"[[:space:]]*:' "$TARGET_ROOT/package.json"; then
-      frontend_test="$package_manager test"
+      frontend_test="$frontend_install && $package_manager test"
     fi
   fi
 
