@@ -1,39 +1,62 @@
 # AI 全栈控制系统
 
-一套可安装到业务项目中的 AI 工程控制系统。目标不是让 AI 自由发挥，而是把需求、设计、数据库、接口、代码、测试和发布审查变成**可确认、可审查、可验证、可回滚**的流程。
+[![CI](https://github.com/BrightLiu4917/ai-coding-fun/actions/workflows/ci.yml/badge.svg)](https://github.com/BrightLiu4917/ai-coding-fun/actions/workflows/ci.yml)
+![version](https://img.shields.io/badge/version-1.0.0-blue)
+![tests](https://img.shields.io/badge/bats-83%20passed-brightgreen)
+![tools](https://img.shields.io/badge/AI%20tools-Codex%20%7C%20Claude%20%7C%20Kimi%20%7C%20Cursor%20%7C%20WorkBuddy-8A2BE2)
+
+**一套安装到业务项目里的 AI 工程控制系统**：把 AI 开发从"祈祷式生成"变成**可确认、可审查、可验证、可回滚**的工程流程。
 
 ```text
 你说需求 → AI 影响探测判级 → 你确认（规格 + 验收用例）→ AI 实现
 → 测试自动回填用例状态 → 发布门禁 + 独立二审 → 交付
 ```
 
-## 核心特性
+---
 
-- **测试用例前置**：验收用例在设计阶段随规格一起经你确认，是"验收契约"；实现后由 JUnit 报告**自动回填**通过/失败状态，AI 无法"没跑就填通过"；发布门禁拦截未回填用例。
-- **梯度流程**：小需求走 lite 快速通道（3 个轻量文件、30 秒确认）；碰数据库/接口/权限自动强制完整流程，门禁拦截偷渡。
-- **数据安全两阶段确认**：表结构设计审查 → 数据库变更确认包 → 你点头才执行 SQL；DROP/TRUNCATE 默认先备份。
-- **多工具通用**：Codex / Kimi Code / Cursor 原生读 AGENTS.md；Claude Code 获得原生自动委派 subagent + skill；WorkBuddy 获得 SKILL.md 技能包。一份源，自动生成全部适配。
-- **自然语言驱动**：在 AI 应用里不需要记命令，说人话即可；AI 按意图路由表执行，判级基于代码影响探测而非措辞猜测。
-- **二审模型随便换**：OpenAI 兼容端点 / Claude 官方 API / 本机 `claude`/`codex` CLI（复用订阅免 key）四种接法，`review.env` 一行切换；输出机读 `VERDICT`，BLOCK 直接拦下发布。
-- **自带质量保障**：82 个 bats 回归测试 + GitHub CI；SQL 语句级安全检查；独立二审外发内容有敏感文件排除和密钥扫描。
+## 目录
+
+- [为什么需要它](#为什么需要它)
+- [30 秒上手](#30-秒上手)
+- [核心概念](#核心概念)
+- [工作流详解](#工作流详解)
+- [多工具接入](#多工具接入)
+- [命令参考](#命令参考)
+- [安装与升级](#安装与升级)
+- [架构与目录](#架构与目录)
+- [质量保障](#质量保障)
+- [文档索引](#文档索引)
+
+---
+
+## 为什么需要它
+
+直接让 AI 写业务代码，通常会遇到四类事故：
+
+| 事故 | 本系统的对策 |
+|---|---|
+| AI 猜测业务规则，发明字段、枚举、API 路径 | **规格先行**：change 未经你确认，禁止写码（契约红线 + 检查脚本双重拦截） |
+| AI 实现完自己宣布"测试通过" | **测试用例前置**：验收用例随规格一起经你确认；状态由 JUnit 报告**自动回填**，AI 无法手填"通过" |
+| AI 顺手执行了危险 SQL | **数据库两阶段确认**：表结构设计审查 → 变更确认包 → 你点头才执行；DROP/TRUNCATE 默认先备份 |
+| 小改动也被流程拖死，最终没人守流程 | **梯度防御**：lite 快速通道 30 秒确认；碰数据库/接口/权限自动强制完整流程，门禁拦截偷渡 |
+
+设计哲学一句话：**AI 的自由度和改动的风险成反比**——改文案随便干，动数据库层层确认。
 
 ## 30 秒上手
 
 ```bash
-# 1. 安装到你的项目（非交互式；交互式用 setup-control-system.sh）
+# 1. 安装到你的项目
 bash control/scripts/bootstrap-new-project.sh --project-dir /path/to/project --profile auto --review
 
-# 2. 进入项目，日常只用 4 个命令
+# 2. 日常只用 4 个命令
 cd /path/to/project
-./ai new login-jwt        # 建变更骨架（小需求加 --lite）
+./ai new login-jwt        # 建变更骨架（小需求：./ai new fix-typo --lite）
 ./ai check login-jwt      # 校验是否可请求确认
 ./ai test login-jwt       # 跑测试 + 自动回填用例状态
 ./ai ship login-jwt       # 发布门禁 + 独立二审
 ```
 
-可选：`./ai install-cli` 把 `ai` 装到 `~/.local/bin`，之后免 `./` 前缀。
-
-**在 Claude / Codex / Kimi / WorkBuddy 里连命令都不用记**，直接说：
+**在 AI 应用（Claude Code / Codex / Kimi / Cursor / WorkBuddy）里连命令都不用记**，说人话即可：
 
 ```text
 你：帮我把订单列表加个导出按钮
@@ -42,121 +65,164 @@ AI：我看了代码，不碰表和接口，按 lite 建了变更单：
     【验收用例】TC-01 点击导出下载文件；TC-02 空列表按钮置灰
     确认吗？
 你：确认
-AI：（实现 → 测试 → 用例回填）完成，可以 ship。
+AI：（实现 → 测试 → 用例自动回填）完成，可以 ship。
 ```
 
-## 你唯一需要守住的两个确认点
+> 可选：`./ai install-cli` 安装全局 `ai` 命令到 `~/.local/bin`，免 `./` 前缀。
 
-1. **OpenSpec change（含验收测试用例）确认后，AI 才能写代码**；
-2. **数据库变更确认包点头后，才能执行 SQL**。
+## 核心概念
 
-其余门禁（用例未回填、SQL 危险、change 不合规、文档不同步）全部由脚本自动拦截。
+### 你只需守住两个确认点
 
-## 工作流
+| 确认点 | 你确认什么 | 不确认会怎样 |
+|---|---|---|
+| **① OpenSpec change** | 需求理解、验收用例覆盖、判级合理性 | AI 禁止写代码 |
+| **② 数据库变更确认包** | 目标 DDL、回滚 SQL、联动改动 | AI 禁止执行任何 SQL |
+
+其余门禁（用例未回填、SQL 危险、change 不合规、规格漂移、文档不同步）全部由脚本自动拦截。
+
+### 6 个工程角色
+
+AI 按角色工作，路由自动衔接（详见 [AGENT_ROUTING](control/docs/AGENT_ROUTING.md)）：
+
+| 角色 | 职责 |
+|---|---|
+| `agent-spec` 产品规格工程师 | 需求澄清、业务建模、OpenSpec、API 契约 |
+| `agent-architect` 系统架构师 | 架构、影响范围、重构切片 |
+| `agent-dba` 数据库工程师 | 表结构、SQL、迁移回滚、两阶段确认 |
+| `agent-dev` 开发工程师 | Java/Go/PHP 后端、Vue/React 前端、UI、CRUD 脚手架（按栈加载规则） |
+| `agent-test` 测试工程师 | **两阶段**：设计期写验收用例 + 实现后执行回填 |
+| `agent-release` 发布审查工程师 | 独立二审、安全/性能必查项、上线前审查 |
+
+### 测试用例是"验收契约"
+
+```text
+设计期   test-cases.md 随规格一起经你确认（用例先于代码存在）
+实现期   测试方法名带用例 ID：test_TC01_分页查询
+验证期   ./ai test → 解析 JUnit 报告 → 按 ID 自动回填 通过/失败
+发布期   状态残留"已设计"→ ship 直接拦截
+```
+
+AI 无法"没跑就填通过"——状态来源是测试报告，不是 AI 的嘴。
+
+## 工作流详解
 
 ```text
                     ┌─ lite（不碰 DB/API/权限）: proposal + tasks + test-cases，30 秒确认
 你提需求 → 影响探测判级 ┤
                     └─ 完整: proposal + design + tasks + test-cases + spec
-                         ├─ 涉及 DB → 表结构设计审查 → 变更确认包 → 你确认
+                         ├─ 涉及 DB → 表结构设计审查 → 变更确认包 → 你确认②
                          └─ 涉及接口/页面 → API 契约 / UI 设计确认
-→ 你确认 → AI 按最小切片实现（测试方法名带用例 ID，如 test_TC01_xxx）
-→ ./ai test：跑测试，JUnit 报告自动回填用例状态
-→ ./ai ship：用例回填门禁 + 独立二审 + 发布必查项
+→ 你确认① → AI 按最小切片实现
+→ ./ai test：JUnit 报告自动回填用例状态
+→ ./ai ship：用例门禁 + 规格防漂移检查 + 独立二审（VERDICT 机读结论，BLOCK 拦截）
 ```
 
-lite 有硬门禁：影响范围声明了数据库表或 API 契约时，`impact-check` 直接失败并要求升级完整流程。
+**lite 有硬门禁**：影响范围声明了数据库表或 API 契约时，`impact-check` 直接失败并要求升级完整流程——快速通道不是逃生通道。
+
+**独立二审**四种接法（配置 `.agent/review.env`，详见[二审使用说明](control/docs/二审使用说明.md)）：
+
+| `REVIEW_PROVIDER` | 说明 |
+|---|---|
+| `openai-compatible`（默认） | DeepSeek / Kimi / 通义 / GLM / GPT / Ollama 等任何兼容端点 |
+| `anthropic` | Claude 官方 Messages API |
+| `claude-cli` / `codex-cli` | 本机 CLI 无头模式，**复用订阅免 API key**，天然独立会话 |
+
+外发安全自动生效：敏感文件排除、密钥扫描中止、diff 超限截断、key 不落命令行。跳过二审必须 `--skip-review "原因"` 留痕。
 
 ## 多工具接入
 
-| 工具 | 契约 | 角色 | 流程技能 | 需要做什么 |
-|---|---|---|---|---|
-| AI 助手 | AGENTS.md 自动加载 | 手册按需读取 | — | 装完即用 |
-| Kimi Code | AGENTS.md 自动加载 | 手册按需读取 | — | 装完即用 |
-| Cursor | AGENTS.md 自动加载 | 手册按需读取 | — | 装完即用 |
-| Claude Code | CLAUDE.md 自动加载 | `.claude/agents/` 原生自动委派 | `.claude/skills/` 3 个 | 安装时自动生成，零操作 |
-| WorkBuddy | 总契约技能 | `workbuddy-skills/` 7 个 SKILL.md（自包含：规则全文内嵌，空工作区也有完整约束） | 同左 | 复制到 `~/.workbuddy/skills/` 重启；规则更新后需重新复制 |
+一份源，自动生成全部适配；改规则后 `./ai sync` 一键重新生成：
 
-改了规则后运行 `./ai sync` 重新生成全部适配文件；生成物默认不覆盖你手改过的文件。
+| 工具 | 契约加载 | 角色机制 | 需要做什么 |
+|---|---|---|---|
+| Codex / Kimi / Cursor | `AGENTS.md` 原生自动读取 | 手册按路由表读取 | **装完即用** |
+| Claude Code | `CLAUDE.md`（自动生成） | `.claude/agents/` **原生自动委派** + 3 个 skill | **零操作**，安装时自动生成 |
+| WorkBuddy | 总契约技能 | `workbuddy-skills/` 7 个自包含 SKILL.md（规则全文内嵌，空工作区可用） | 复制到 `~/.workbuddy/skills/` 重启；规则更新后重新复制 |
 
-## 核心架构
+## 命令参考
 
-```text
-AGENTS.md              总契约：安全红线、任务分级、意图路由、高层入口（由脚本从 control/AGENTS.md 生成）
-control/openspec/      产品、需求、规格、变更、归档的事实源
-control/agents/        6 个角色手册（规格/架构/DBA/开发/测试/发布）
-control/rules/         工程规则层（单层编号：10-db、20-api、41-spring-boot 等，见 rules/README.md）
-control/docs/          给人读的中文文档 + ADR + 系统说明
-control/scripts/       安装、检查、测试、用例同步、独立二审、适配导出
-control/templates/     change 五件套模板、CI 模板、ai 命令模板
-control/tests/         82 个 bats 回归测试
-control/tools/         确定性工具（CRUD 预览生成器）
-control/examples/      3 个完整落地示例（含已回填的测试用例）
-control/profiles/      按技术栈安装的 profile
-```
+日常入口 `./ai`（其余底层脚本见[使用手册](control/docs/使用手册.md#命令参考)）：
 
-安装后这些资产位于目标项目 `.ai-control/control/` 下；`AGENTS.md`、`CONTEXT.md`、`openspec/`、`./ai` 在项目根。
+| 命令 | 作用 |
+|---|---|
+| `./ai new <id> [--lite]` | 建变更骨架（lite = 小需求快速通道） |
+| `./ai check <id>` | change 合规校验（影响范围/路由闭环/用例覆盖/语言规范） |
+| `./ai test [<id>]` | 跑测试；带 id 自动回填用例状态 |
+| `./ai ship <id> [--skip-review "原因"]` | 用例门禁 + 防漂移 + 独立二审 |
+| `./ai sync` | 重新生成全部工具适配文件 |
+| `./ai upgrade [--source <仓库>]` | 升级框架（不碰用户数据，自动备份） |
+| `./ai doctor` | 环境体检 |
+| `./ai install-cli` | 安装全局 `ai` 命令 |
 
-## Agent 分工（6 个角色）
-
-| Agent | 中文角色 | 用途 |
-|-------|----------|------|
-| `agent-spec` | 产品规格工程师 | 需求澄清、业务建模、OpenSpec 提案/执行/归档、API 契约 |
-| `agent-architect` | 系统架构师 | 架构、影响范围、重构切片 |
-| `agent-dba` | 数据库工程师 | 表结构、SQL、迁移、回滚、两阶段确认 |
-| `agent-dev` | 开发工程师 | Java/Go/PHP 后端、Vue/React 前端、UI 交互、CRUD 脚手架（按栈读对应章节和规则） |
-| `agent-test` | 测试工程师 | **设计期写验收用例 + 实现后执行回填**（两阶段） |
-| `agent-release` | 发布审查工程师 | 独立二审、安全/性能必查项、上线前审查 |
-
-## 安装方式
+## 安装与升级
 
 ```bash
-# 交互式向导（推荐首次使用）
+# 交互式向导（推荐首次）
 bash control/scripts/setup-control-system.sh
 
 # 非交互式
 bash control/scripts/bootstrap-new-project.sh --project-dir /path/to/project --profile auto --review
 
-# 直接安装（可 --dry-run 预览）
+# 直接安装（--dry-run 可预览）
 bash control/scripts/install-to-project.sh --dry-run --profile default /path/to/project
 bash control/scripts/install-to-project.sh --backup --profile fullstack-admin /path/to/project
 ```
 
-安装是安全的：冲突预检在拷贝前进行，已有文件默认不覆盖，`--backup` 落带时间戳的备份目录。
+安装安全性：冲突预检在拷贝前进行；已有文件默认不覆盖；`--backup` 落带时间戳备份目录。
 
-**升级**：控制系统出新版后，在已安装项目里运行 `./ai upgrade --source /path/to/控制系统仓库`——只更新框架文件（`.ai-control/control/`、AGENTS.md、`./ai`），不碰 openspec/、CONTEXT.md、project.env 等用户数据，升级前自动备份可回退。版本记录在 `control/VERSION`。
+**升级**：`./ai upgrade --source /path/to/本仓库` 只更新框架文件（`.ai-control/control/`、AGENTS.md、`./ai`），**绝不触碰** `openspec/`、`CONTEXT.md`、`project.env`、`.agent/`；升级前自动备份，可一条命令回退。版本见 [control/VERSION](control/VERSION)。
 
-## 自动检查与测试
+## 架构与目录
 
-```bash
-bash control/scripts/run-control-tests.sh                 # 82 个 bats 回归测试
-bash control/scripts/agent-check.sh                       # agent 手册规范
-bash control/scripts/route-check.sh                       # 路由一致性
-bash control/scripts/docs-link-check.sh                   # 文档引用有效性
-bash control/scripts/sync-agents-md.sh --check            # AGENTS.md 同步校验
-bash control/scripts/openspec-check.sh openspec/changes/<id>   # change 聚合校验
-bash control/scripts/openspec-conflict-check.sh           # 跨 change 冲突
-bash control/scripts/sql-safety-check.sh <file.sql>       # SQL 语句级安全检查
-bash control/scripts/spec-drift-check.sh openspec/changes/<id>  # 规格与代码反向比对（ship 时自动跑）
+```text
+安装后的目标项目/
+├── AGENTS.md            总契约（红线/分级/意图路由）— Codex/Kimi/Cursor 自动读
+├── CLAUDE.md  .claude/  Claude Code 适配（自动生成）
+├── ai                   统一命令入口
+├── openspec/            事实源：changes/（变更五件套）+ specs/（归档规格）← 你只看这里
+├── workbuddy-skills/    WorkBuddy 技能包（自动生成）
+├── .agent/              本地运行数据：review.env、日志、审查记录（gitignore）
+└── .ai-control/control/ 系统本体 ← 你不需要打开
+    ├── agents/          6 个角色手册
+    ├── rules/           规则层（单层编号：10-db-schema、20-api、41-spring-boot…）
+    ├── scripts/         检查、测试、二审、导出、升级
+    ├── templates/       变更模板、CI 模板
+    └── tests/           83 个 bats 回归测试
 ```
 
-仓库自带 GitHub CI（`.github/workflows/ci.yml`）：shell 语法 + shellcheck、五项自检、bats 全量。目标项目 CI 模板见 `control/templates/ci/`。
+分层原则：**契约（每次对话必加载）→ 角色（按任务自动委派）→ 规则（按需读取）**——约束全生效且不撑爆上下文。规则只在 `rules/` 单处维护，所有工具适配物由脚本从这份源生成，禁止手改生成物（有同步校验兜底）。
 
-## 文档
+## 质量保障
 
-- **[使用手册](control/docs/使用手册.md)** ← 详细使用指南，从安装到日常开发全流程
-- [快速开始](control/docs/快速开始.md)
-- [不同项目如何接入](control/docs/不同项目如何接入.md)
-- [二审使用说明](control/docs/二审使用说明.md)
-- [流程图](control/docs/流程图.md)
-- [环境依赖](control/docs/环境依赖.md)
-- [改进记录](CHANGELOG.md)
+系统自身的工程质量由三层验证保证，全部挂在 CI：
+
+```bash
+bash control/scripts/run-control-tests.sh    # 83 个 bats 回归测试（含每个已修 bug 的回归用例）
+shellcheck control/scripts/**/*.sh           # 静态检查 0 告警
+bash control/scripts/agent-check.sh          # 手册规范 / route-check 路由 / docs-link-check 引用
+bash control/scripts/sync-agents-md.sh --check   # 生成物与源同步校验
+```
+
+对目标项目的检查能力：SQL 语句级安全分析（跨行/注释/字符串感知）、影响范围五字段校验、声明⇒任务闭环、跨 change 冲突检测、规格防漂移反向比对、用例覆盖与回填门禁。
+
+## 文档索引
+
+| 文档 | 内容 |
+|---|---|
+| **[使用手册](control/docs/使用手册.md)** | 从安装到日常开发的完整指南（推荐通读一次） |
+| [快速开始](control/docs/快速开始.md) / [新项目快速接入](control/docs/新项目快速接入.md) | 上手路径 |
+| [如何提需求](control/docs/如何提需求.md) | 给 AI 提需求的正确姿势 |
+| [二审使用说明](control/docs/二审使用说明.md) | 独立二审配置、四种 provider、故障排查 |
+| [不同项目如何接入](control/docs/不同项目如何接入.md) / [环境依赖](control/docs/环境依赖.md) | 适配与环境 |
+| [流程图](control/docs/流程图.md) | 全流程 mermaid 图 |
+| [CHANGELOG](CHANGELOG.md) | 十三批改进的完整记录 |
 
 ## 核心原则
 
-- OpenSpec 管事实源；测试用例是验收契约。
-- 不清楚就停止并询问，禁止猜测业务规则。
-- 非简单任务先进入 OpenSpec；小需求走 lite，但门禁不豁免。
-- 数据库写操作必须经两阶段确认。
-- 实现必须有验证；用例状态由测试报告回填，不由 AI 手填。
-- 交付前必须过发布门禁和审查。
+1. OpenSpec 管事实源；测试用例是验收契约。
+2. 不清楚就停止并询问，禁止猜测业务规则。
+3. 非简单任务先进入 OpenSpec；小需求走 lite，门禁不豁免。
+4. 数据库写操作必须经两阶段确认。
+5. 用例状态由测试报告回填，不由 AI 手填。
+6. 交付前必须过发布门禁和独立二审。
