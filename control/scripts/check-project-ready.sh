@@ -49,7 +49,7 @@ source_env() {
 }
 
 if [[ ! -f "$PROJECT_ROOT/.ai-control/project.env" && -x "$ROOT/scripts/detect-project-profile.sh" ]]; then
-  "$ROOT/scripts/detect-project-profile.sh" --write "$PROJECT_ROOT" >/dev/null
+  warn "未找到 .ai-control/project.env；可运行 detect-project-profile.sh --write 生成项目画像"
 fi
 
 source_env "$PROJECT_ROOT/.ai-control/project.env"
@@ -59,8 +59,8 @@ printf '==> 控制系统文件\n'
 check_file "AGENTS.md"
 check_file "CONTEXT.md"
 check_file "openspec/config.yaml"
-check_file ".ai-control/control/agents/agent-product.md"
-check_file ".ai-control/control/agents/agent-openspec.md"
+check_file ".ai-control/control/agents/agent-spec.md"
+check_file ".ai-control/control/agents/agent-spec.md"
 check_file ".ai-control/control/agents/agent-release.md"
 check_file ".ai-control/control/scripts/run-tests.sh"
 check_file ".ai-control/control/scripts/openspec-language-check.sh"
@@ -101,9 +101,9 @@ fi
 if [[ "${HAS_SPRING_BOOT:-0}" == "1" ]]; then
   printf '\n==> Java / Spring Boot\n'
   has_command java && ok "java" || fail "检测到 Spring Boot，但 java 不可用"
-  if [[ -n "${BACKEND_DIR:-}" && -x "$ROOT/$BACKEND_DIR/mvnw" ]]; then
+  if [[ -n "${BACKEND_DIR:-}" && -x "$PROJECT_ROOT/$BACKEND_DIR/mvnw" ]]; then
     ok "$BACKEND_DIR/mvnw"
-  elif [[ -x "$ROOT/mvnw" ]]; then
+  elif [[ -x "$PROJECT_ROOT/mvnw" ]]; then
     ok "mvnw"
   elif has_command mvn; then
     ok "mvn"
@@ -133,16 +133,16 @@ if [[ "${HAS_PHP:-0}" == "1" ]]; then
   has_command composer && ok "composer" || warn "composer 不可用"
 fi
 
-printf '\n==> deepv4\n'
-if [[ -f "$PROJECT_ROOT/.agent/deepv4.env" ]]; then
-  source_env "$PROJECT_ROOT/.agent/deepv4.env"
-  if [[ -n "${DEEPV4_BASE_URL:-}" && -n "${DEEPV4_API_KEY:-}" && -n "${DEEPV4_MODEL:-}" ]]; then
-    ok ".agent/deepv4.env 已配置"
+printf '\n==> 独立二审\n'
+if [[ -f "$PROJECT_ROOT/.agent/review.env" ]]; then
+  source_env "$PROJECT_ROOT/.agent/review.env"
+  if [[ -n "${REVIEW_BASE_URL:-${DEEPV4_BASE_URL:-}}" && -n "${REVIEW_API_KEY:-${DEEPV4_API_KEY:-}}" && -n "${REVIEW_MODEL:-${DEEPV4_MODEL:-}}" ]]; then
+    ok "独立二审已配置"
   else
-    warn ".agent/deepv4.env 存在，但 DEEPV4_BASE_URL / DEEPV4_API_KEY / DEEPV4_MODEL 不完整"
+    warn "二审配置存在，但 REVIEW_BASE_URL / REVIEW_API_KEY / REVIEW_MODEL 不完整"
   fi
 else
-  warn "未启用 deepv4；需要二审时复制 .ai-control/control/templates/deepv4.env.example 到 .agent/deepv4.env"
+  warn "未启用独立二审；需要时复制 .ai-control/control/templates/review.env.example 到 .agent/review.env"
 fi
 
 printf '\n==> 检查脚本\n'

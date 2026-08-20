@@ -323,23 +323,51 @@ printf 'Docker: %s\n' "$(yes_no "$HAS_DOCKER")"
 
 if [[ "$WRITE" -eq 1 ]]; then
   mkdir -p "$TARGET_ROOT/.ai-control"
-  PROJECT_ACCESS_CONTROL_MODE="${ACCESS_CONTROL_MODE:-pending}"
-  if [[ -f "$TARGET_ROOT/.ai-control/project.env" ]]; then
-    existing_access_control="$(awk -F= '/^ACCESS_CONTROL_MODE=/ { print $2; exit }' "$TARGET_ROOT/.ai-control/project.env" | tr -d "'\"" || true)"
-    PROJECT_ACCESS_CONTROL_MODE="${existing_access_control:-$PROJECT_ACCESS_CONTROL_MODE}"
-  fi
-  cat > "$TARGET_ROOT/.ai-control/project.env" <<EOF
+  ENV_FILE="$TARGET_ROOT/.ai-control/project.env"
+
+  read_existing_env() {
+    # 在子 shell 里 source 读回，保证与写入时的引号转义对称
+    local key="$1"
+    [[ -f "$ENV_FILE" ]] || return 0
+    (
+      set +eu
+      # shellcheck disable=SC1090
+      source "$ENV_FILE" >/dev/null 2>&1
+      eval "printf '%s' \"\${${key}:-}\""
+    )
+  }
+
+  # 用户已确认或手改过的值优先于本次探测值，避免 --write 静默覆盖
+  existing_access_control="$(read_existing_env ACCESS_CONTROL_MODE)"
+  PROJECT_ACCESS_CONTROL_MODE="${existing_access_control:-${ACCESS_CONTROL_MODE:-pending}}"
+  existing_test_command="$(read_existing_env PROJECT_TEST_COMMAND)"
+  [[ -n "$existing_test_command" ]] && PROJECT_TEST_COMMAND="$existing_test_command"
+  existing_backend_dir="$(read_existing_env BACKEND_DIR)"
+  [[ -n "$existing_backend_dir" ]] && BACKEND_DIR="$existing_backend_dir"
+  existing_frontend_dir="$(read_existing_env FRONTEND_DIR)"
+  [[ -n "$existing_frontend_dir" ]] && FRONTEND_DIR="$existing_frontend_dir"
+
+  # 单引号包裹并转义值内单引号，保证含空格/引号的值可安全 source 且可重复读回
+  sq() {
+    local v="$1"
+    local q="'"
+    local esc="'\''"
+    v="${v//$q/$esc}"
+    printf "'%s'" "$v"
+  }
+
+  cat > "$ENV_FILE" <<EOF
 # 本文件由 scripts/detect-project-profile.sh 生成。
 # 只记录项目画像和推荐配置，不放密钥。
 
-PROJECT_NAME='$PROJECT_NAME'
-PROJECT_ROOT='$TARGET_ROOT'
-AI_CONTROL_PROFILE='$PROFILE'
-BACKEND_DIR='${BACKEND_DIR:-}'
-FRONTEND_DIR='${FRONTEND_DIR:-}'
-PACKAGE_MANAGER='$PACKAGE_MANAGER'
-PROJECT_TEST_COMMAND='${PROJECT_TEST_COMMAND:-}'
-ACCESS_CONTROL_MODE='$PROJECT_ACCESS_CONTROL_MODE'
+PROJECT_NAME=$(sq "$PROJECT_NAME")
+PROJECT_ROOT=$(sq "$TARGET_ROOT")
+AI_CONTROL_PROFILE=$(sq "$PROFILE")
+BACKEND_DIR=$(sq "${BACKEND_DIR:-}")
+FRONTEND_DIR=$(sq "${FRONTEND_DIR:-}")
+PACKAGE_MANAGER=$(sq "$PACKAGE_MANAGER")
+PROJECT_TEST_COMMAND=$(sq "${PROJECT_TEST_COMMAND:-}")
+ACCESS_CONTROL_MODE=$(sq "$PROJECT_ACCESS_CONTROL_MODE")
 
 HAS_SPRING_BOOT=$HAS_SPRING_BOOT
 HAS_MYBATIS=$HAS_MYBATIS

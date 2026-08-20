@@ -2,11 +2,12 @@ name = "fullstack-admin"
 description = "面向前后端一体后台管理项目，包含 OpenSpec、中文 agent、通用规则、前后端规则、脚本和通用 CRUD 预览脚手架。"
 items = [
   "AGENTS.md",
-  "CODEX_TASK_TEMPLATE.md",
+  "TASK_TEMPLATE.md",
   "CONTEXT.md",
   "CONTEXT-MAP.md",
   "openspec",
   "docs",
+  "rules",
   "agents",
   "tools/codegen/java-springboot-crud-adapters/README.md",
   "tools/codegen/java-springboot-crud-adapters/generic",

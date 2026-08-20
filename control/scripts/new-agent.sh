@@ -11,7 +11,7 @@ Usage:
   bash .ai-control/control/scripts/new-agent.sh [--dry-run] <agent-name> "<中文角色名>" "<中文职责描述>"
 
 Examples:
-  bash .ai-control/control/scripts/new-agent.sh agent-go "Go 后端开发工程师" "Go 后端实现手册，用于 Gin/GORM 项目..."
+  bash .ai-control/control/scripts/new-agent.sh agent-dev "Go 后端开发工程师" "Go 后端实现手册，用于 Gin/GORM 项目..."
   bash .ai-control/control/scripts/new-agent.sh go "Go 后端开发工程师" "Go 后端实现手册，用于 Gin/GORM 项目..."
 USAGE
 }

@@ -6,20 +6,22 @@
 
 ## 职责
 
-负责 deepv4 二审、代码审查、上线前总审查、发布准备、回滚方案和验证记录。
+负责独立二审、代码审查、安全审查、性能审查、上线前总审查、发布准备、回滚方案和验证记录。本角色合并了原安全工程师和性能工程师职责。
 
 ## 适用场景
 
 - 用户要求 review、code review、上线前检查。
 - 实现完成后需要判断是否符合 OpenSpec 和工程规则。
-- 涉及 DB、权限、状态流、复杂业务或发布风险，需要 deepv4 二审。
+- 涉及 DB、权限、状态流、复杂业务或发布风险，需要独立二审。
 
 ## 必须读取
 
 - `AGENTS.md`
-- `.ai-control/control/docs/CODE_REVIEW_RULES.md`
-- `.ai-control/control/docs/DEEPV4_REVIEW.md`
-- `.ai-control/control/docs/RELEASE_RULES.md`
+- `.ai-control/control/rules/54-code-review.md`
+- `.ai-control/control/docs/SECOND_REVIEW.md`
+- `.ai-control/control/rules/53-release.md`
+- `.ai-control/control/rules/51-security.md`，如涉及安全风险
+- `.ai-control/control/rules/52-performance.md`，如涉及性能风险
 - 相关 OpenSpec specs/changes
 - 当前 git diff 和测试结果
 
@@ -28,15 +30,15 @@
 1. 识别变更范围和用户意图。
 2. 阅读相关 diff、受影响文件和既有调用代码。
 3. 按业务正确性、数据安全、安全性、事务、兼容性、性能和可维护性检查。
-4. 涉及复杂业务、DB、权限、状态流或发布风险时，运行 deepv4 二审。
-5. deepv4 意见必须由 Codex 判断是否成立，不能自动当作业务事实。
+4. 涉及复杂业务、DB、权限、状态流或发布风险时，运行独立二审。
+5. 独立二审意见必须由 AI 助手判断是否成立，不能自动当作业务事实。
 6. 没有发现问题时，明确说明验证范围和残余风险。
 
-## deepv4 命令
+## 独立二审命令
 
 ```bash
-bash .ai-control/control/scripts/prepare-deepv4-review.sh
-bash .ai-control/control/scripts/run-deepv4-review.sh
+bash .ai-control/control/scripts/prepare-review.sh
+bash .ai-control/control/scripts/run-review.sh
 ```
 
 ## 必查项
@@ -52,11 +54,50 @@ bash .ai-control/control/scripts/run-deepv4-review.sh
 - 是否暴露敏感字段、异常堆栈、token、密码或隐私数据。
 - 是否引入未经批准的依赖、架构变化或无关重构。
 - 每一行变更是否能追溯到用户需求、OpenSpec change、已确认规格或明确验证失败。
+- test-cases.md 用例状态是否全部回填为通过/失败，无“已设计”残留（可运行 `test-cases-check.sh --require-filled` 验证）；失败用例是否已修复或明确记录残余风险。
 - 是否存在顺手优化、顺手改格式、顺手改注释、无关风格统一或无关历史代码清理。
 - 本次改动造成的 unused import、未使用变量、未使用组件引用、未使用私有方法、临时日志、调试代码和注释代码是否已清理。
 - 是否误删或计划删除改动前已存在的疑似 dead code；如有，是否完成静态引用、配置引用、框架引用、契约引用、测试引用和发布影响检查。
 - 是否存在过度封装：没有真实差异的接口、策略、模板方法、工厂类、空壳层、无调用方扩展点，或把简单流程拆成大量一行私有方法。
 - 删除 Controller、API 入口、路由页面、菜单入口、Entity、DTO、VO、Mapper、XML、枚举、状态类、权限码、错误码、序列化字段或动态组件时，是否有兼容性和运行时引用验证。
+
+## 安全审查
+
+### 工作流程
+
+1. 识别认证和权限边界。
+2. 新增或修改后台功能时，必须确认访问控制模式：本服务 RBAC、外部权限服务、网关/IAM/SSO 或明确不适用。
+3. 检查无权限、未登录、越权访问和数据范围隔离。
+4. 检查敏感字段、日志、异常和导出。
+5. 检查 SQL 注入、XSS、文件上传和密钥。
+6. 输出阻塞风险和修复建议。
+
+## 性能审查
+
+### 工作流程
+
+1. 明确数据规模和访问频率。
+2. 检查 SQL、索引、分页和 N+1。
+3. 检查缓存、批量操作和事务范围。
+4. 检查前端重复请求、大列表和渲染成本。
+5. 检查 API 响应体大小、分页策略、缓存头和重复请求。
+6. 输出优化建议和验证方式。
+
+## 停止并询问
+
+除 `.ai-control/control/rules/00-agent-base.md` 的停止并询问基线外，出现以下情况必须停止并询问：
+
+- 测试未通过、验证缺失或独立二审阻塞问题未处理，但被要求放行。
+- 变更包含未经确认的数据库或 API 变更。
+- 缺少回滚方案或回滚方案不可执行。
+- 发布范围与已确认 OpenSpec change 不一致。
+- 访问控制模式、责任系统或权限模型不明。
+- 发现疑似已泄露的密钥、token 或生产连接串。
+- 修复方案会破坏既有兼容性或需要业务决策。
+- 风险等级判断需要业务影响输入。
+- 缺少数据量级、QPS、延迟目标等性能基线。
+- 优化方案需要改变业务行为、表结构或 API 契约。
+- 性能问题无法复现，且缺少监控或日志证据。
 
 ## 输出格式
 

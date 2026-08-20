@@ -31,6 +31,18 @@ if [[ -f "$PROJECT_ENV_FILE" ]]; then
   set +a
 fi
 
+# 测试结束后（无论通过与否）按 JUnit 报告自动回填用例状态。
+# 通过环境变量 OPENSPEC_CHANGE_ID 指定当前 change，与 prepare-review.sh 约定一致。
+sync_test_cases() {
+  local change_id="${OPENSPEC_CHANGE_ID:-}"
+  [[ -n "$change_id" ]] || return 0
+  local change_dir="$PROJECT_ROOT/openspec/changes/$change_id"
+  [[ -f "$change_dir/test-cases.md" ]] || return 0
+  [[ -x "$ROOT/scripts/test-cases-sync.sh" ]] || return 0
+  bash "$ROOT/scripts/test-cases-sync.sh" "$change_dir" 2>&1 | tee -a "$LOG_FILE" || true
+}
+trap sync_test_cases EXIT
+
 is_self_test_command() {
   local command="$1"
 
