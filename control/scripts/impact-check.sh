@@ -44,6 +44,33 @@ check_file_scope() {
 check_file_scope "$CHANGE_DIR/proposal.md"
 check_file_scope "$CHANGE_DIR/design.md"
 
+# lite 级别门禁：小需求快速通道不允许涉及数据库表或 API 契约，
+# 声明了对应影响范围时必须转为完整流程（不带 --lite 重新生成骨架）。
+has_scope_item() {
+  local key="$1"
+  local file="$2"
+  [[ -f "$file" ]] || return 1
+  awk -v key="$key" '
+    $0 ~ "^[[:space:]]*" key ":" { in_key=1; next }
+    in_key && /^[[:space:]]*[a-zA-Z_]+:/ { in_key=0 }
+    in_key && /^[[:space:]]*-[[:space:]]*/ {
+      item=$0
+      sub(/^[[:space:]]*-[[:space:]]*/, "", item)
+      if (item != "" && item != "none") found=1
+    }
+    END { exit found ? 0 : 1 }
+  ' "$file"
+}
+
+if grep -Eq '^变更级别:[[:space:]]*lite' "$CHANGE_DIR/proposal.md" 2>/dev/null; then
+  if has_scope_item "affected_tables" "$CHANGE_DIR/proposal.md"; then
+    error "lite 变更不允许涉及数据库表（affected_tables 非 none）；请升级为完整流程"
+  fi
+  if has_scope_item "affected_apis" "$CHANGE_DIR/proposal.md"; then
+    error "lite 变更不允许涉及 API 契约（affected_apis 非 none）；请升级为完整流程"
+  fi
+fi
+
 if [[ "$fail" -eq 1 ]]; then
   echo "Impact check failed."
   exit 2

@@ -11,7 +11,8 @@ if [[ -z "$TARGET" || ! -e "$TARGET" ]]; then
 fi
 
 fail=0
-tmp_file="/tmp/openspec-language-check.$$"
+tmp_file="$(mktemp)"
+trap 'rm -f "$tmp_file"' EXIT
 STRICT_CHINESE="${OPENSPEC_STRICT_CHINESE:-1}"
 
 to_regex_pattern() {

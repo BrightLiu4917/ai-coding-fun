@@ -25,7 +25,7 @@ name = "default"
 description = "完整安装"
 items = [
   "AGENTS.md",
-  "CODEX_TASK_TEMPLATE.md",
+  "TASK_TEMPLATE.md",
   "openspec",
   "docs",
   "agents",

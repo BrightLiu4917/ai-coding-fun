@@ -2,11 +2,12 @@ name = "vue3-admin"
 description = "面向 Vue3 管理端项目，包含 OpenSpec、Web 前端、UI、API、测试、安全和发布规则。"
 items = [
   "AGENTS.md",
-  "CODEX_TASK_TEMPLATE.md",
+  "TASK_TEMPLATE.md",
   "CONTEXT.md",
   "CONTEXT-MAP.md",
   "openspec",
   "docs",
+  "rules",
   "agents",
   "scripts",
   "templates",

@@ -29,8 +29,8 @@ if [[ -x "$(dirname "$0")/route-compliance-check.sh" ]]; then
   "$(dirname "$0")/route-compliance-check.sh" "$CHANGE_DIR" || fail=1
 fi
 
-if [[ -x "$(dirname "$0")/rbac-check.sh" ]]; then
-  "$(dirname "$0")/rbac-check.sh" "$CHANGE_DIR" || fail=1
+if [[ -x "$(dirname "$0")/test-cases-check.sh" ]]; then
+  "$(dirname "$0")/test-cases-check.sh" "$CHANGE_DIR" || fail=1
 fi
 
 if [[ -x "$(dirname "$0")/openspec-language-check.sh" ]]; then

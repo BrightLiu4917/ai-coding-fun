@@ -30,12 +30,9 @@ affected_pages:
   - /supplier/onboarding
   - /platform/supplier-onboarding
 affected_agents:
-  - agent-product
-  - agent-api
+  - agent-spec
   - agent-dba
-  - agent-java
-  - agent-web
-  - agent-security
+  - agent-dev
   - agent-release
 ```
 

@@ -33,11 +33,10 @@ affected_apis:
 affected_pages:
   - 用户列表页
 affected_agents:
-  - agent-ui
-  - agent-api
-  - agent-web
-  - agent-java
-  - agent-security
+  - agent-dev
+  - agent-spec
+  - agent-dev
+  - agent-release
   - agent-test
   - agent-release
 ```

@@ -2,11 +2,12 @@ name = "minimal"
 description = "最小安装，只复制任务入口、OpenSpec、核心规则和 agents。"
 items = [
   "AGENTS.md",
-  "CODEX_TASK_TEMPLATE.md",
+  "TASK_TEMPLATE.md",
   "CONTEXT.md",
   "CONTEXT-MAP.md",
   "openspec",
   "docs",
+  "rules",
   "agents",
   "scripts",
   "tools/codegen/java-springboot-crud-adapters/README.md",

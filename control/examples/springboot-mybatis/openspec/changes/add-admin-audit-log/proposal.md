@@ -33,10 +33,9 @@ affected_pages:
   - none
 affected_agents:
   - agent-dba
-  - agent-api
-  - agent-java
+  - agent-spec
+  - agent-dev
   - agent-test
-  - agent-security
   - agent-release
 ```
 

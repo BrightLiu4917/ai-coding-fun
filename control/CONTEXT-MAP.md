@@ -57,10 +57,10 @@ openspec/specs/supplier-onboarding/spec.md
 
 ```text
 .ai-control/project.env
-docs/stacks/SPRING_BOOT.md
-docs/stacks/VUE3.md
-docs/features/JWT_RULES.md
-docs/features/RBAC_RULES.md
+rules/41-spring-boot.md
+rules/31-vue3.md
+rules/21-jwt.md
+rules/22-rbac.md
 ```
 
 ## 关系
@@ -75,6 +75,6 @@ docs/features/RBAC_RULES.md
 ## 冲突处理
 
 - `openspec/specs/` 与 `api-contracts/` 冲突时，以已确认规格为准。
-- `.ai-control/control/docs/stacks/` 与目标项目既有代码冲突时，以目标项目既有约定为准。
+- `.ai-control/control/rules/` 与目标项目既有代码冲突时，以目标项目既有约定为准。
 - `.ai-control/project.env` 与实际项目结构冲突时，应重新运行检测脚本或手工修正项目画像。
 - `CONTEXT.md` 中的术语与 OpenSpec 已确认规格冲突时，以 OpenSpec 为准，并同步修正 `CONTEXT.md`。

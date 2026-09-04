@@ -102,7 +102,7 @@ IS_REACT=""
 IS_JAVA=""
 IS_SPRING_BOOT=""
 IS_GUPO=""
-USE_DEEPV4=""
+USE_REVIEW=""
 BACKEND_ONLY=""
 
 header "第一步：目标项目信息"
@@ -121,6 +121,7 @@ while true; do
     warn "目录不存在: $PROJECT_DIR"
     prompt "是否自动创建? (y/N)"
     read_input create_dir
+    # shellcheck disable=SC2154  # read_input 通过 printf -v 赋值
     if is_yes "$create_dir"; then
       mkdir -p "$PROJECT_DIR"
       step "已创建目录: $PROJECT_DIR"
@@ -155,13 +156,10 @@ DETECTED_NODE=0
 DETECTED_VUE=0
 DETECTED_REACT=0
 DETECTED_SPRING_BOOT=0
-DETECTED_MAVEN=0
-DETECTED_NPM=0
 DETECTED_PNPM=0
 
 if find "$PROJECT_DIR" -maxdepth 3 -name pom.xml -print -quit 2>/dev/null | grep -q .; then
   DETECTED_JAVA=1
-  DETECTED_MAVEN=1
   step "检测到: Java / Maven (pom.xml)"
 
   if grep -R "<artifactId>spring-boot-starter-parent</artifactId>" "$PROJECT_DIR" --include pom.xml >/dev/null 2>&1; then
@@ -188,7 +186,6 @@ if find "$PROJECT_DIR" -maxdepth 3 -name package.json -print -quit 2>/dev/null |
     DETECTED_PNPM=1
     step "检测到: pnpm"
   elif find "$PROJECT_DIR" -maxdepth 3 -name package-lock.json -print -quit 2>/dev/null | grep -q .; then
-    DETECTED_NPM=1
     step "检测到: npm"
   fi
 fi
@@ -263,11 +260,11 @@ if [[ "$DETECTED_SPRING_BOOT" -eq 1 || "$(lower "${IS_SPRING_BOOT:-}")" == "y" ]
   IS_GUPO="${IS_GUPO:-n}"
 fi
 
-header "第四步：deepv4 配置"
+header "第四步：独立二审配置"
 
-prompt "需要 deepv4 二审吗? (y/N)"
-read_input USE_DEEPV4
-USE_DEEPV4="${USE_DEEPV4:-n}"
+prompt "需要 独立二审吗? (y/N)"
+read_input USE_REVIEW
+USE_REVIEW="${USE_REVIEW:-n}"
 
 header "第五步：确认安装方案"
 
@@ -282,7 +279,7 @@ printf  "  │  Vue         %-30s │\n" "$(is_yes "${IS_VUE:-n}" && echo "是" 
 printf  "  │  React       %-30s │\n" "$(is_yes "${IS_REACT:-n}" && echo "是" || echo "否")"
 printf  "  │  全栈        %-30s │\n" "$(is_yes "${IS_FULLSTACK:-n}" && echo "是" || echo "否")"
 printf  "  │  gupo 专用   %-30s │\n" "$(is_yes "${IS_GUPO:-n}" && echo "是" || echo "否")"
-printf  "  │  deepv4 二审 %-30s │\n" "$(is_yes "${USE_DEEPV4:-n}" && echo "是" || echo "否")"
+printf  "  │  独立二审 %-30s │\n" "$(is_yes "${USE_REVIEW:-n}" && echo "是" || echo "否")"
 echo   "  └─────────────────────────────────────────────┘"
 
 prompt "确认安装? (Y/n)"
@@ -313,9 +310,7 @@ fi
 
 INSTALL_ARGS+=(--profile "$PROFILE")
 
-GIT_REPO=0
 if git -C "$PROJECT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
-  GIT_REPO=1
   INSTALL_ARGS+=(--backup)
 else
   warn "目标项目不在 git 仓库中，将使用 --backup 避免静默覆盖。建议安装后 git init。"
@@ -330,7 +325,19 @@ header "第七步：初始化项目上下文"
 
 INIT_ARGS=(--name "$PROJECT_NAME")
 if [[ -f "$PROJECT_DIR/openspec/project.md" || -f "$PROJECT_DIR/CONTEXT.md" ]]; then
-  INIT_ARGS+=(--force)
+  warn "检测到已有 openspec/project.md 或 CONTEXT.md。"
+  prompt "覆盖已有项目上下文？(y/N，默认保留)"
+  read_input OVERWRITE_CONTEXT
+  if is_yes "${OVERWRITE_CONTEXT:-n}"; then
+    BACKUP_DIR="$PROJECT_DIR/.agent/install-backup/context-$(date +%Y%m%d%H%M%S)"
+    mkdir -p "$BACKUP_DIR"
+    [[ -f "$PROJECT_DIR/openspec/project.md" ]] && cp "$PROJECT_DIR/openspec/project.md" "$BACKUP_DIR/project.md"
+    [[ -f "$PROJECT_DIR/CONTEXT.md" ]] && cp "$PROJECT_DIR/CONTEXT.md" "$BACKUP_DIR/CONTEXT.md"
+    info "旧文件已备份到 ${BACKUP_DIR#$PROJECT_DIR/}"
+    INIT_ARGS+=(--force)
+  else
+    info "保留已有项目上下文，跳过覆盖。"
+  fi
 fi
 
 "$ROOT/scripts/init-project.sh" "${INIT_ARGS[@]}" "$PROJECT_DIR"
@@ -352,7 +359,7 @@ elif is_yes "${IS_SPRING_BOOT:-n}" && ! is_yes "${IS_GUPO:-n}"; then
   warn "CRUD 链路会走通用 adapter 预览 → 用户确认 → 手写实现"
 fi
 
-header "第九步：配置测试和 deepv4"
+header "第九步：配置测试和独立二审"
 
 PROJECT_ENV_FILE="$PROJECT_DIR/.agent/project.env"
 if [[ ! -f "$PROJECT_ENV_FILE" ]]; then
@@ -403,24 +410,24 @@ if [[ -n "$TEST_COMMAND" ]]; then
   fi
 fi
 
-if is_yes "${USE_DEEPV4:-n}"; then
-  DEEPV4_ENV_FILE="$PROJECT_DIR/.agent/deepv4.env"
-  if [[ ! -f "$DEEPV4_ENV_FILE" ]]; then
-    cp "$ROOT/templates/deepv4.env.example" "$DEEPV4_ENV_FILE"
-  fi
-  warn "请在 .agent/deepv4.env 中填入真实的 DEEPV4_BASE_URL 和 DEEPV4_API_KEY"
-fi
-
+# 先写 .gitignore 再落 review.env，避免密钥文件存在却未被忽略的窗口期
 if ! grep -q '^\.agent/' "$PROJECT_DIR/.gitignore" 2>/dev/null; then
   echo '.agent/' >> "$PROJECT_DIR/.gitignore"
   step "已将 .agent/ 加入 .gitignore"
 fi
 
-step "测试和 deepv4 配置完成"
+if is_yes "${USE_REVIEW:-n}"; then
+  REVIEW_ENV_FILE="$PROJECT_DIR/.agent/review.env"
+  if [[ ! -f "$REVIEW_ENV_FILE" ]]; then
+    cp "$ROOT/templates/review.env.example" "$REVIEW_ENV_FILE"
+  fi
+  chmod 600 "$REVIEW_ENV_FILE"
+  warn "请在 .agent/review.env 中填入真实的 REVIEW_BASE_URL 和 REVIEW_API_KEY"
+fi
+
+step "测试和 独立二审配置完成"
 
 header "第十步：运行验证"
-
-FAIL=0
 
 if [[ -x "$PROJECT_DIR/.ai-control/control/scripts/agent-check.sh" ]]; then
   if "$PROJECT_DIR/.ai-control/control/scripts/agent-check.sh"; then
@@ -458,9 +465,9 @@ if is_yes "${IS_GUPO:-n}"; then
   echo ""
 fi
 
-if is_yes "${USE_DEEPV4:-n}"; then
-  echo "  - deepv4 二审已启用，请配置 key："
-  echo "     vim .agent/deepv4.env"
+if is_yes "${USE_REVIEW:-n}"; then
+  echo "  - 独立二审已启用，请配置 key："
+  echo "     vim .agent/review.env"
   echo ""
 fi
 

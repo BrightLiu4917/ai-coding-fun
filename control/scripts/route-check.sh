@@ -29,18 +29,18 @@ require_in_file() {
 [[ -f "$AGENTS" ]] || error "Missing AGENTS.md"
 
 for token in \
-  "agent-product" \
-  "agent-openspec" \
+  "agent-spec" \
+  "agent-spec" \
   "agent-architect" \
-  "agent-ui" \
-  "agent-web" \
-  "agent-api" \
-  "agent-java" \
+  "agent-dev" \
+  "agent-dev" \
+  "agent-spec" \
+  "agent-dev" \
   "agent-dba" \
-  "agent-codegen" \
+  "agent-dev" \
   "agent-test" \
-  "agent-security" \
-  "agent-performance" \
+  "agent-release" \
+  "agent-release" \
   "agent-release"; do
   require_in_file "$ROUTING" "$token"
   require_in_file "$AGENTS" "$token"
@@ -54,7 +54,7 @@ else
 fi
 require_in_file "$ROUTING" "未确认 adapter 时禁止生成"
 require_in_file "$ROUTING" "generic adapter"
-require_in_file "$ROUTING" "deepv4"
+require_in_file "$ROUTING" "二审"
 
 if grep -R "tools/codegen/java-springboot-crud/scripts" "$AGENTS" "$ROOT/docs" "$ROOT/agents" "$REPO_ROOT/README.md" >/dev/null 2>&1; then
   error "Old generic-looking codegen script path is still referenced"

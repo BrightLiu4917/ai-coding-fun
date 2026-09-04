@@ -25,12 +25,12 @@ bash control/scripts/install-to-project.sh --backup --profile default /path/to/y
 管理端新功能默认流程：
 
 ```text
-agent-product
--> agent-openspec
--> agent-ui
--> agent-api
+agent-spec
+-> agent-spec
+-> agent-dev
+-> agent-spec
 -> agent-dba，如涉及数据库
--> agent-web / agent-java，可在 API 契约确认后并行
+-> agent-dev / agent-dev，可在 API 契约确认后并行
 -> agent-test
 -> agent-release
 ```

@@ -49,11 +49,11 @@ if [[ -f "$PROPOSAL" && -f "$TASKS" ]]; then
   fi
 
   if has_scope_item "affected_apis" "$PROPOSAL"; then
-    require_tasks_token "affected_apis" "api-contract|API contract|API 契约|接口契约|agent-api"
+    require_tasks_token "affected_apis" "api-contract|API contract|API 契约|接口契约|agent-spec"
   fi
 
   if has_scope_item "affected_pages" "$PROPOSAL"; then
-    require_tasks_token "affected_pages" "agent-web|agent-ui|frontend|前端|visual|界面"
+    require_tasks_token "affected_pages" "agent-dev|agent-dev|frontend|前端|visual|界面"
   fi
 
   if has_scope_item "affected_files" "$PROPOSAL"; then

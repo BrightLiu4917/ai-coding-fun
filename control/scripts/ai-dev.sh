@@ -24,10 +24,11 @@ Usage:
 
 Commands:
   init [--force]              初始化最小项目卡片，包含访问控制模式，不写代码
-  feature <change-id> [--force] 创建 OpenSpec 功能变更骨架
+  feature <change-id> [--force] 创建 OpenSpec 功能变更骨架（五件套完整流程）
+  feature <change-id> --lite    小需求快速通道：只生成 proposal/tasks/test-cases，不允许涉及数据库和 API
   ready <change-id>           检查 OpenSpec 是否可以进入实现
   test                        运行项目测试
-  review                      准备并运行 deepv4 二审
+  review                      准备并运行独立二审
   next                        查看下一步建议
   help                        查看帮助
 
@@ -225,54 +226,57 @@ shell_quote() {
   printf "%q" "$1"
 }
 
-write_deepv4_env() {
+write_review_env() {
   local base_url="$1"
   local api_key="$2"
   local model="$3"
-  local file="$PROJECT_ROOT/.agent/deepv4.env"
+  local file="$PROJECT_ROOT/.agent/review.env"
 
   mkdir -p "$PROJECT_ROOT/.agent"
   {
-    printf '# deepv4 二审配置。本文件包含密钥，不要提交到 git。\n'
-    printf 'DEEPV4_BASE_URL=%s\n' "$(shell_quote "$base_url")"
-    printf 'DEEPV4_API_KEY=%s\n' "$(shell_quote "$api_key")"
-    printf 'DEEPV4_MODEL=%s\n' "$(shell_quote "$model")"
-    printf 'DEEPV4_TEMPERATURE=%s\n' "$(shell_quote "0.1")"
-    printf 'DEEPV4_CONNECT_TIMEOUT_SECONDS=%s\n' "$(shell_quote "10")"
-    printf 'DEEPV4_TIMEOUT_SECONDS=%s\n' "$(shell_quote "180")"
-    printf 'DEEPV4_REVIEW_COMMAND=%s\n' "$(shell_quote "bash .ai-control/control/scripts/providers/deepv4-openai-compatible.sh")"
+    printf '# 独立二审配置。本文件包含密钥，不要提交到 git。\n'
+    printf 'REVIEW_BASE_URL=%s\n' "$(shell_quote "$base_url")"
+    printf 'REVIEW_API_KEY=%s\n' "$(shell_quote "$api_key")"
+    printf 'REVIEW_MODEL=%s\n' "$(shell_quote "$model")"
+    printf 'REVIEW_TEMPERATURE=%s\n' "$(shell_quote "0.1")"
+    printf 'REVIEW_CONNECT_TIMEOUT_SECONDS=%s\n' "$(shell_quote "10")"
+    printf 'REVIEW_TIMEOUT_SECONDS=%s\n' "$(shell_quote "180")"
+    printf '# provider: openai-compatible（DeepSeek/Kimi/通义/GLM/GPT/Ollama 等）或 anthropic（Claude 官方 API）\n'
+    printf 'REVIEW_PROVIDER=%s\n' "$(shell_quote "openai-compatible")"
+    printf '# 触发策略: auto（lite 跳过）| always | never\n'
+    printf 'REVIEW_MODE=%s\n' "$(shell_quote "auto")"
   } > "$file"
   chmod 600 "$file" 2>/dev/null || true
-  info "[WRITE] .agent/deepv4.env"
+  info "[WRITE] .agent/review.env"
 }
 
-configure_deepv4() {
-  local enable_deepv4=0
+configure_review() {
+  local enable_review=0
   local base_url=""
   local api_key=""
   local model=""
-  local file="$PROJECT_ROOT/.agent/deepv4.env"
+  local file="$PROJECT_ROOT/.agent/review.env"
 
-  prompt_yes_no enable_deepv4 "是否现在启用 deepv4 二审配置" "n"
-  if [[ "$enable_deepv4" -ne 1 ]]; then
+  prompt_yes_no enable_review "是否现在启用独立二审配置" "n"
+  if [[ "$enable_review" -ne 1 ]]; then
     return 0
   fi
 
   if [[ -f "$file" && "$FORCE" -ne 1 ]]; then
-    warn "已存在，跳过 .agent/deepv4.env。需要覆盖 deepv4 配置时加 --force。"
+    warn "已存在，跳过 .agent/review.env。需要覆盖二审配置时加 --force。"
     return 0
   fi
 
-  prompt_input base_url "DEEPV4_BASE_URL" "https://api.deepseek.com/v1"
-  prompt_secret api_key "DEEPV4_API_KEY"
-  prompt_input model "DEEPV4_MODEL" "deepv4"
+  prompt_input base_url "REVIEW_BASE_URL" "https://api.deepseek.com/v1"
+  prompt_secret api_key "REVIEW_API_KEY"
+  prompt_input model "REVIEW_MODEL" "deepseek-reasoner"
 
   if [[ -z "$api_key" ]]; then
-    warn "DEEPV4_API_KEY 为空，已跳过 deepv4 配置。"
+    warn "REVIEW_API_KEY 为空，已跳过二审配置。"
     return 0
   fi
 
-  write_deepv4_env "$base_url" "$api_key" "$model"
+  write_review_env "$base_url" "$api_key" "$model"
 }
 
 describe_access_control_mode() {
@@ -422,7 +426,7 @@ ${api_rule}
 - 每个真实功能通过 OpenSpec 单独确认。
 - 未确认内容只能写成待确认，不能直接实现。"
 
-  configure_deepv4
+  configure_review
 
   info ""
   info "下一步："
@@ -433,10 +437,15 @@ ${api_rule}
 cmd_feature() {
   local change_id=""
   FORCE=0
+  LITE=0
   while [[ "$#" -gt 0 ]]; do
     case "$1" in
       --force)
         FORCE=1
+        shift
+        ;;
+      --lite)
+        LITE=1
         shift
         ;;
       -*)
@@ -462,6 +471,70 @@ cmd_feature() {
   local access_control_text
   access_control_text="$(describe_access_control_mode "$access_control_mode")"
 
+  # 小需求快速通道：只生成 proposal + tasks + test-cases 三个轻量文件。
+  # 门禁保证 lite 不被滥用：影响范围声明了数据库或接口时，impact-check 会要求升级为完整流程。
+  if [[ "$LITE" -eq 1 ]]; then
+    mkdir -p "$change_dir"
+
+    write_file "$change_dir/proposal.md" "# 变更提案：${change_id}
+
+变更级别: lite
+
+## 需求说明
+待确认：一两句话说清楚要改什么、为什么。
+
+## 影响范围
+
+affected_files:
+  - 待确认
+affected_tables:
+  - none
+affected_apis:
+  - none
+affected_pages:
+  - none
+affected_agents:
+  - none
+
+## 待确认问题
+- 待确认。"
+
+    write_file "$change_dir/tasks.md" "# 任务清单
+
+## 实现
+- [ ] 优先级：中；状态：待处理；负责人：AI 助手；预计工时：待确认；验收标准：按已确认 proposal 最小实现。
+
+## 验证
+- [ ] 优先级：高；状态：待处理；负责人：AI 助手；预计工时：15 分钟；验收标准：按 test-cases.md 执行并回填状态，运行 \`${AI_DEV_COMMAND} test\`。"
+
+    write_file "$change_dir/test-cases.md" "# 测试用例
+
+> lite 变更同样需要验收用例；实现后回填状态。
+
+## 用例清单
+
+| 用例ID | 关联场景 | 类型 | 前置条件 | 步骤 | 预期结果 | 验证方式 | 状态 |
+|--------|----------|------|----------|------|----------|----------|------|
+| TC-01 | 待确认 | 正常流 | 待确认 | 待确认 | 待确认 | 手动 | 已设计 |
+
+- 类型：正常流 / 异常流 / 权限 / 边界 / 兼容性 / 并发
+- 验证方式：单测 / 集成 / E2E / 手动
+- 状态：已设计 / 通过 / 失败"
+
+    info ""
+    info "lite 变更骨架已生成（proposal / tasks / test-cases）。"
+    info "注意：lite 不允许涉及数据库表或 API 契约；如需涉及，请不带 --lite 重新生成完整骨架。"
+    info ""
+    info "复制给 AI 助手："
+    cat <<EOF
+请读取 openspec/changes/${change_id}（lite 变更）。
+补全需求说明、影响文件和测试用例，列出待确认问题。
+本变更不涉及数据库和 API 契约；如发现需要涉及，停止并告知我升级为完整流程。
+不要直接写代码。
+EOF
+    return 0
+  fi
+
   mkdir -p "$change_dir/specs/$capability"
 
   write_file "$change_dir/proposal.md" "# 变更提案：${change_id}
@@ -486,8 +559,7 @@ affected_apis:
 affected_pages:
   - none
 affected_agents:
-  - agent-product
-  - agent-openspec
+  - agent-spec
 \`\`\`
 
 ## 非目标
@@ -515,7 +587,7 @@ affected_agents:
 
 ### 问题 3：API 请求和响应如何定义？
 - 需要确认：接口路径、请求字段、响应结构、错误码、分页格式和兼容性。
-- 建议方案：遵循 \`.ai-control/control/docs/API_RULES.md\`，只使用 GET/POST，不使用路径参数，对外 ID 按字符串。
+- 建议方案：遵循 \`.ai-control/control/rules/20-api.md\`，只使用 GET/POST，不使用路径参数，对外 ID 按字符串。
 - 推荐原因：保持前后端契约一致，避免长整型 ID 精度丢失和接口风格混乱。
 - 影响范围：影响 Controller、DTO、VO、前端 API 调用、错误态和联调测试。
 - 可选方案：新增接口；复用既有接口；先只定义契约不实现。
@@ -524,7 +596,7 @@ affected_agents:
 ### 问题 4：测试和验收标准是什么？
 - 需要确认：本功能最小可验证路径、失败路径、权限路径和回归范围。
 - 建议方案：至少覆盖正常流程、参数错误、无权限或越权、数据不存在和构建/测试命令。
-- 推荐原因：让 Codex 和 deepv4 能基于证据判断实现是否可交付。
+- 推荐原因：让 AI 助手 和独立二审能基于证据判断实现是否可交付。
 - 影响范围：影响单元测试、集成测试、前端构建、手动验收和发布审查。
 - 可选方案：自动化测试；最小脚本验证；人工关键路径验证。
 - 默认处理：如用户确认，才按建议方案进入设计和实现；未确认前不得写入已确认规格。"
@@ -549,7 +621,7 @@ affected_pages:
   - none
 affected_agents:
   - agent-architect
-  - agent-api
+  - agent-spec
   - agent-dba
   - agent-test
 \`\`\`
@@ -558,7 +630,7 @@ affected_agents:
 待确认。
 
 ## 接口设计
-待确认。API 路径必须遵循 \`.ai-control/control/docs/API_RULES.md\`。
+待确认。API 路径必须遵循 \`.ai-control/control/rules/20-api.md\`。
 
 ## 权限设计
 - 访问控制模式：${access_control_text}
@@ -579,19 +651,45 @@ affected_agents:
   write_file "$change_dir/tasks.md" "# 任务清单
 
 ## 需求确认
-- [ ] 优先级：高；状态：待处理；负责人：用户/Codex；预计工时：30 分钟；验收标准：字段、状态、权限、API 和响应格式已确认。
+- [ ] 优先级：高；状态：待处理；负责人：用户/AI 助手；预计工时：30 分钟；验收标准：字段、状态、权限、API 和响应格式已确认。
 
 ## 设计确认
-- [ ] 优先级：高；状态：待处理；负责人：Codex；预计工时：30 分钟；验收标准：数据库、接口、权限和测试方案已确认。
+- [ ] 优先级：高；状态：待处理；负责人：AI 助手；预计工时：30 分钟；验收标准：数据库、接口、权限和测试方案已确认。
 
 ## 实现
-- [ ] 优先级：中；状态：待处理；负责人：Codex；预计工时：待确认；验收标准：按已确认 OpenSpec 最小切片实现。
+- [ ] 优先级：中；状态：待处理；负责人：AI 助手；预计工时：待确认；验收标准：按已确认 OpenSpec 最小切片实现。
 
 ## 验证
-- [ ] 优先级：高；状态：待处理；负责人：Codex；预计工时：30 分钟；验收标准：运行 \`${AI_DEV_COMMAND} test\` 并记录结果。
+- [ ] 优先级：高；状态：待处理；负责人：AI 助手；预计工时：30 分钟；验收标准：运行 \`${AI_DEV_COMMAND} test\` 并记录结果。
 
 ## 审查
-- [ ] 优先级：中；状态：待处理；负责人：Codex/deepv4；预计工时：30 分钟；验收标准：完成发布审查或 deepv4 二审。"
+- [ ] 优先级：中；状态：待处理；负责人：AI 助手/二审；预计工时：30 分钟；验收标准：完成发布审查或独立二审。"
+
+  write_file "$change_dir/test-cases.md" "# 测试用例
+
+> 设计阶段由测试工程师产出，随 change 一起确认；实现后回填状态，发布审查前不得残留“已设计”。
+
+## 用例清单
+
+| 用例ID | 关联场景 | 类型 | 前置条件 | 步骤 | 预期结果 | 验证方式 | 状态 |
+|--------|----------|------|----------|------|----------|----------|------|
+| TC-01 | 待确认 | 正常流 | 待确认 | 待确认 | 待确认 | 单测 | 已设计 |
+
+- 类型：正常流 / 异常流 / 权限 / 边界 / 兼容性 / 并发
+- 验证方式：单测 / 集成 / E2E / 手动
+- 状态：已设计 / 通过 / 失败
+
+## 测试命令
+
+\`\`\`bash
+${AI_DEV_COMMAND} test
+\`\`\`
+
+## 手动验证步骤
+- 待确认。
+
+## 残余风险
+- 待确认。"
 
   write_file "$change_dir/specs/$capability/spec.md" "# ${change_id} 规格
 
@@ -627,12 +725,12 @@ affected_agents:
 - 需要确认：本规格的功能模块、业务流程、状态流转、数据结构、接口、权限和异常处理哪些已经确认。
 - 建议方案：只把用户已确认内容写入规格；未确认内容继续保留在 change 的 proposal/design。
 - 推荐原因：避免把建议字段、建议状态、建议权限误写成已确认事实。
-- 影响范围：影响后续实现、测试、deepv4 审查和归档。
+- 影响范围：影响后续实现、测试、二审和归档。
 - 可选方案：先只确认最小可验证切片；或继续补充 OpenSpec 后再实现。
 - 默认处理：如用户确认，才按建议方案进入设计和实现；未确认前不得写入已确认规格。"
 
   info ""
-  info "复制给 Codex："
+  info "复制给 AI 助手："
   cat <<EOF
 请读取 openspec/changes/${change_id}。
 先补全需求理解、功能范围、表结构影响、API、访问控制/RBAC、测试计划和待确认问题。
@@ -662,7 +760,7 @@ cmd_ready() {
   rm -f "$unresolved_file"
   info "READY_OK"
   info ""
-  info "复制给 Codex："
+  info "复制给 AI 助手："
   cat <<EOF
 我已确认 openspec/changes/$(basename "$change_dir")。
 请按 tasks.md 最小可验证切片实现。
@@ -675,8 +773,8 @@ cmd_test() {
 }
 
 cmd_review() {
-  "$ROOT/scripts/prepare-deepv4-review.sh"
-  "$ROOT/scripts/run-deepv4-review.sh"
+  "$ROOT/scripts/prepare-review.sh"
+  "$ROOT/scripts/run-review.sh"
 }
 
 cmd_next() {
@@ -696,7 +794,7 @@ cmd_next() {
   unresolved_file="$(mktemp)"
   if contains_unresolved "$latest_change" "$unresolved_file"; then
     rm -f "$unresolved_file"
-    info "下一步：把下面这段发给 Codex"
+    info "下一步：把下面这段发给 AI 助手"
     cat <<EOF
 请读取 openspec/changes/$(basename "$latest_change")。
 帮我处理待确认问题，不要写代码。

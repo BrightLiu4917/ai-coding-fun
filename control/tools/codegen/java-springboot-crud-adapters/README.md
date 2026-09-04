@@ -43,5 +43,5 @@ bash .ai-control/control/tools/codegen/java-springboot-crud-adapters/generic/scr
 
 如果目标项目不是 gupo，且需要真实落地 CRUD：
 - 先用 generic preview adapter 形成可审查草稿，或跳过预览直接进入人工实现流程。
-- 经用户确认后转入 Java 后端开发工程师（`agent-java`）做生产级实现。
-- 手写实现必须遵守 `.ai-control/control/docs/SPRING_BOOT_RULES.md` 和 `.ai-control/control/docs/BACKEND_RULES.md` 的抽象、封装、事务、契约、测试和审查要求。
+- 经用户确认后转入 开发工程师（`agent-dev`）做生产级实现。
+- 手写实现必须遵守 `.ai-control/control/rules/41-spring-boot.md` 和 `.ai-control/control/rules/40-backend.md` 的抽象、封装、事务、契约、测试和审查要求。

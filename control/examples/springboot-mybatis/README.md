@@ -23,11 +23,11 @@ bash control/scripts/install-to-project.sh --backup --profile minimal /path/to/y
 后端任务默认流程：
 
 ```text
-agent-openspec
+agent-spec
 -> agent-dba，如涉及表结构、SQL、索引或数据兼容
--> agent-api，如涉及接口
--> agent-codegen，如涉及 CRUD 脚手架，先识别 adapter
--> agent-java
+-> agent-spec，如涉及接口
+-> agent-dev，如涉及 CRUD 脚手架，先识别 adapter
+-> agent-dev
 -> agent-test
 -> agent-release
 ```
