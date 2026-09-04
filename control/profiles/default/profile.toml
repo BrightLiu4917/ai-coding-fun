@@ -2,11 +2,12 @@ name = "default"
 description = "安装 AI 全栈控制系统通用资产，不包含公司专用 codegen adapter 工具。"
 items = [
   "AGENTS.md",
-  "CODEX_TASK_TEMPLATE.md",
+  "TASK_TEMPLATE.md",
   "CONTEXT.md",
   "CONTEXT-MAP.md",
   "openspec",
   "docs",
+  "rules",
   "agents",
   "tools/codegen/java-springboot-crud-adapters/README.md",
   "tools/codegen/java-springboot-crud-adapters/generic",

@@ -25,7 +25,7 @@ _避免_: 只改代码不沉淀事实源。
 _避免_: 在讨论规格时混用 module、feature、page，除非确实指代码模块、功能点或页面。
 
 **Actor**:
-执行任务或使用系统的角色。对本仓库而言，常见 Actor 包括产品负责人、工程师、DBA、QA、审查者和 Codex。
+执行任务或使用系统的角色。对本仓库而言，常见 Actor 包括产品负责人、工程师、DBA、QA、审查者和 AI 助手。
 _避免_: 需要区分职责时只说 user。
 
 **Workflow**:
@@ -45,7 +45,7 @@ _避免_: 一个 agent 同时负责多个语言、框架或流程阶段。
 _避免_: 在多个文档里维护互相冲突的路由规则。
 
 **Codegen Adapter**:
-面向特定项目约定的代码生成适配器。Java Spring Boot CRUD 生成必须先由 `agent-codegen` 识别 adapter，再进入具体 adapter 或经确认转入手写实现。
+面向特定项目约定的代码生成适配器。Java Spring Boot CRUD 生成必须先由 `agent-dev` 识别 adapter，再进入具体 adapter 或经确认转入手写实现。
 _避免_: 把某个项目专用脚手架描述成通用脚手架。
 
 **Generic Adapter**:
@@ -84,13 +84,13 @@ _避免_: 用“看起来没问题”替代可定位、可复现的审查结论�
 ## 示例对话
 
 > **工程师:** "这次只是补安装脚本和 profile，要不要进 OpenSpec？"
-> **Codex:** "会新增脚本和目录结构，属于非简单任务。先创建 **Change**，确认范围不涉及 DB/API 后再实现。"
+> **AI 助手:** "会新增脚本和目录结构，属于非简单任务。先创建 **Change**，确认范围不涉及 DB/API 后再实现。"
 
 > **工程师:** "目标项目只想安装规则文档和 agents。"
-> **Codex:** "这属于安装 **Profile** 的选择，可以使用 `profiles/minimal/profile.toml`，或用 `--only` 明确安装条目。"
+> **AI 助手:** "这属于安装 **Profile** 的选择，可以使用 `profiles/minimal/profile.toml`，或用 `--only` 明确安装条目。"
 
 > **工程师:** "这个 Spring Boot 项目能直接生成 CRUD 吗？"
-> **Codex:** "先做 **Adapter Confirmation**。当前只有 **Gupo Adapter** 可执行；如果不是 gupo 项目，不能套用该 adapter。"
+> **AI 助手:** "先做 **Adapter Confirmation**。当前只有 **Gupo Adapter** 可执行；如果不是 gupo 项目，不能套用该 adapter。"
 
 ## 已标记歧义
 

@@ -8,7 +8,7 @@ PROJECT_NAME=""
 PROFILE="auto"
 BACKEND_DIR=""
 FRONTEND_DIR=""
-USE_DEEPV4=0
+USE_REVIEW=0
 USE_GUPO=0
 DRY_RUN=0
 FORCE=0
@@ -24,7 +24,7 @@ Options:
   --project-dir <path>     Target project directory. Required.
   --project-name <name>    Project name. Defaults to directory name.
   --profile <name>         auto, fullstack-admin, java-springboot, vue3-admin, react-admin, go-gin, php, default, gupo, or minimal. Default: auto.
-  --deepv4                 Add deepv4 placeholder config in .agent/deepv4.env.
+  --review                 Add second-review placeholder config in .agent/review.env.
   --gupo                   Install and configure gupo adapter.
   --backend <dir>          Backend directory, for example api.
   --frontend <dir>         Frontend directory, for example vue.
@@ -159,8 +159,8 @@ while [[ "$#" -gt 0 ]]; do
       FRONTEND_DIR="$2"
       shift 2
       ;;
-    --deepv4)
-      USE_DEEPV4=1
+    --review|--deepv4)
+      USE_REVIEW=1
       shift
       ;;
     --gupo)
@@ -250,7 +250,7 @@ fi
 printf 'Project: %s\n' "$PROJECT_NAME"
 printf 'Directory: %s\n' "$PROJECT_DIR"
 printf 'Profile: %s\n' "$PROFILE"
-printf 'deepv4: %s\n' "$([[ "$USE_DEEPV4" -eq 1 ]] && echo yes || echo no)"
+printf 'review: %s\n' "$([[ "$USE_REVIEW" -eq 1 ]] && echo yes || echo no)"
 printf 'gupo: %s\n' "$([[ "$USE_GUPO" -eq 1 ]] && echo yes || echo no)"
 
 "$ROOT/scripts/install-to-project.sh" "${INSTALL_ARGS[@]}" "$PROJECT_DIR"
@@ -260,7 +260,12 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
   exit 0
 fi
 
-"$ROOT/scripts/init-project.sh" --name "$PROJECT_NAME" --force "$PROJECT_DIR"
+# 已有项目卡片/CONTEXT 默认保留（init-project.sh 会 [SKIP]）；仅用户显式 --force 时覆盖
+INIT_ARGS=(--name "$PROJECT_NAME")
+if [[ "$FORCE" -eq 1 ]]; then
+  INIT_ARGS+=(--force)
+fi
+"$ROOT/scripts/init-project.sh" "${INIT_ARGS[@]}" "$PROJECT_DIR"
 
 mkdir -p "$PROJECT_DIR/.agent"
 
@@ -284,15 +289,36 @@ if [[ -n "$TEST_COMMAND" ]]; then
   fi
 fi
 
-if [[ "$USE_DEEPV4" -eq 1 ]]; then
-  DEEPV4_ENV_FILE="$PROJECT_DIR/.agent/deepv4.env"
-  if [[ ! -f "$DEEPV4_ENV_FILE" ]]; then
-    cp "$ROOT/templates/deepv4.env.example" "$DEEPV4_ENV_FILE"
-  fi
-fi
-
+# 先写 .gitignore 再落 review.env，避免密钥文件存在却未被忽略的窗口期
 if ! grep -q '^\.agent/' "$PROJECT_DIR/.gitignore" 2>/dev/null; then
   printf '.agent/\n' >> "$PROJECT_DIR/.gitignore"
+fi
+
+# 导出 Claude Code / WorkBuddy 适配层（已存在的文件自动跳过）
+if [[ -x "$PROJECT_DIR/.ai-control/control/scripts/export-adapters.sh" ]]; then
+  bash "$PROJECT_DIR/.ai-control/control/scripts/export-adapters.sh" "$PROJECT_DIR"
+fi
+
+# 生成统一命令入口 ./ai（已存在则跳过）
+if [[ ! -f "$PROJECT_DIR/ai" && -f "$PROJECT_DIR/.ai-control/control/templates/ai-launcher.sh" ]]; then
+  cp "$PROJECT_DIR/.ai-control/control/templates/ai-launcher.sh" "$PROJECT_DIR/ai"
+  chmod +x "$PROJECT_DIR/ai"
+fi
+
+# 记录版本与安装来源，供 ai upgrade 使用
+if [[ -f "$ROOT/VERSION" ]]; then
+  cp "$ROOT/VERSION" "$PROJECT_DIR/.ai-control/VERSION"
+fi
+if [[ -f "$PROJECT_DIR/.ai-control/project.env" ]] && ! grep -q '^AI_CONTROL_SOURCE=' "$PROJECT_DIR/.ai-control/project.env"; then
+  printf "AI_CONTROL_SOURCE='%s'\n" "$(cd "$ROOT/.." && pwd)" >> "$PROJECT_DIR/.ai-control/project.env"
+fi
+
+if [[ "$USE_REVIEW" -eq 1 ]]; then
+  REVIEW_ENV_FILE="$PROJECT_DIR/.agent/review.env"
+  if [[ ! -f "$REVIEW_ENV_FILE" ]]; then
+    cp "$ROOT/templates/review.env.example" "$REVIEW_ENV_FILE"
+  fi
+  chmod 600 "$REVIEW_ENV_FILE"
 fi
 
 if [[ -x "$PROJECT_DIR/.ai-control/control/scripts/agent-check.sh" ]]; then

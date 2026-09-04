@@ -49,5 +49,5 @@ bash .ai-control/control/tools/codegen/java-springboot-crud-adapters/generic/scr
 - 禁止对非 gupo 项目使用 gupo adapter。
 - 禁止把 preview draft 当成已确认实现。
 - 禁止绕过 OpenSpec、DBA、API contract、权限、租户和测试确认。
-- 真实落地必须经用户确认后转入 Java 后端开发工程师（`agent-java`）或项目专用 adapter。
+- 真实落地必须经用户确认后转入 开发工程师（`agent-dev`）或项目专用 adapter。
 - 覆盖业务源码必须通过单独确认的实现流程完成。

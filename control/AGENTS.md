@@ -24,11 +24,9 @@
 - `openspec/config.yaml`：OpenSpec 中文输出、文档结构和校验规则。
 - `CONTEXT.md` / `CONTEXT-MAP.md`：领域语言、上下文地图和跨角色通用词汇。
 - `.ai-control/control/docs/adr/`：长期架构决策，只记录难逆转、令人意外且有真实取舍的决策。
-- `.ai-control/control/docs/`：产品、业务、UX、前端、后端、数据库、测试、安全、性能、审查和发布规则。
-- `.ai-control/control/docs/common/`：跨技术栈的通用接入和项目适配规则。
-- `.ai-control/control/docs/stacks/`：Spring Boot、Vue3、React、Go、PHP 等技术栈规则。
-- `.ai-control/control/docs/features/`：JWT、RBAC、CRUD、OpenAPI 等功能规则。
-- `.ai-control/control/agents/`：专项任务执行手册，使用 `.ai-control/control/agents/agent-*.md` 命名。
+- `.ai-control/control/rules/`：单层编号规则库（00 基线、10 数据库、20 接口/功能、30 前端、40 后端、50 质量交付、60 接入适配），索引见其 README。
+- `.ai-control/control/docs/`：给人阅读的使用文档与系统说明（使用手册、二审说明、路由说明等）。
+- `.ai-control/control/agents/`：6 个角色手册，使用 `.ai-control/control/agents/agent-*.md` 命名。
 - `.ai-control/control/tools/`：可复制到目标项目内使用的确定性工具，例如代码脚手架。
 - `.ai-control/control/scripts/`：自动化检查和安全网。
 - `.ai-control/control/templates/`：标准产物模板。
@@ -78,6 +76,7 @@ openspec/changes/<change-id>/
 ├── proposal.md
 ├── design.md
 ├── tasks.md
+├── test-cases.md
 └── specs/
     └── <capability>/
         └── spec.md
@@ -89,53 +88,67 @@ openspec/changes/<change-id>/
 3. 功能范围和非范围。
 4. 受影响能力规格。
 5. 设计方案，如涉及跨模块、数据库、接口兼容、状态流转或 UI 工作流。
-6. ToDo List。
-7. 不明确、不完整或有风险的点。
-8. 待确认建议。
-9. 需要用户确认的问题。
+6. 验收测试用例（test-cases.md，由测试工程师在设计阶段产出）。
+7. ToDo List。
+8. 不明确、不完整或有风险的点。
+9. 待确认建议。
+10. 需要用户确认的问题。
 
-用户确认 OpenSpec change 前，禁止进入实现。
+用户确认 OpenSpec change 前，禁止进入实现。测试用例是验收契约：实现必须向已确认用例收敛，执行阶段禁止为迁就实现而修改用例；确需修改时必须重新经用户确认。
+
+### lite 变更（小需求快速通道）
+同时满足以下条件的非简单任务，可使用 `ai-dev.sh feature <change-id> --lite` 走快速通道，只需 proposal.md、tasks.md、test-cases.md 三个文件（proposal 头部标注 `变更级别: lite`）：
+1. 不涉及数据库表结构、字段、索引、SQL 变更。
+2. 不涉及 API 契约新增或变更。
+3. 不涉及权限、租户、支付、状态流转或删除行为。
+4. 改动范围可明确列出，且有可执行的验收用例。
+
+lite 变更仍需用户确认后才能实现。实现过程中发现触碰上述任一红线时，必须停止并升级为完整流程；`impact-check` 会强制拦截声明了数据库或 API 影响的 lite 变更。
 实现和验证完成后，应将已确认行为归档到 `openspec/specs/`。
+
+## 自然语言意图路由
+用户用自然语言表达意图时，按下表路由；不要求用户记忆命令、参数或关键字。
+
+| 用户意图（示例说法） | 处理动作 |
+|---|---|
+| 新功能：“加个 XX”“帮我做 XX”“我想要 XX” | 1) 影响探测：先检索代码，列出本需求可能触碰的文件、表、API；2) 依据探测证据按任务分级判级（lite 条件见下）；3) 生成对应骨架（`./ai new <id>` 或 `./ai new <id> --lite`）；4) 确认单必须标注“级别 + 判级理由”并等待用户确认 |
+| 小改动：“改个文案”“调下样式”“修个小问题” | 同上，通常判为 lite；判级理由照样要给 |
+| 验证：“测一下”“跑下测试”“验证一下” | `./ai test <change-id>`，汇报测试结果和用例回填情况 |
+| 交付：“能上线吗”“检查下能不能交付”“发布” | `./ai ship <change-id>`，汇报门禁结果和残余风险 |
+| 数据库：“表加个字段”“建张表” | 切数据库工程师，先输出表结构设计审查，用户确认前禁止执行 |
+| 同步：“规则改了”“重新生成配置” | `./ai sync` |
+
+判级规则：
+- 判级必须基于影响探测的证据（触碰哪些文件/表/接口），禁止仅凭用户措辞猜测。
+- 用户明说“小需求/大需求”时尊重其判级直接走对应骨架，但门禁校验照常；实现中发现越界必须停止并升级为完整流程。
+- 判级错误的代价必须偏向安全：拿不准时判高一级。
 
 ## Agent 路由总则
 详细路由、并行/循环/回退规则和冲突处理见 `.ai-control/control/docs/AGENT_ROUTING.md`。
 
 对用户输出时，必须优先使用中文角色名；需要定位文件或路由时，再在括号中保留 agent id。例如：数据库工程师（`agent-dba`）。
 
-生产级主入口：
-- 产品需求工程师：`.ai-control/control/agents/agent-product.md`
-- OpenSpec 规格工程师：`.ai-control/control/agents/agent-openspec.md`
-- 系统架构师：`.ai-control/control/agents/agent-architect.md`
-- UI 交互设计师：`.ai-control/control/agents/agent-ui.md`
-- Web 前端开发工程师：`.ai-control/control/agents/agent-web.md`
-- API 契约工程师：`.ai-control/control/agents/agent-api.md`
-- Java 后端开发工程师：`.ai-control/control/agents/agent-java.md`
-- Go 后端开发工程师：`.ai-control/control/agents/agent-go.md`
-- PHP 后端开发工程师：`.ai-control/control/agents/agent-php.md`
-- 数据库工程师：`.ai-control/control/agents/agent-dba.md`
-- 代码生成工程师：`.ai-control/control/agents/agent-codegen.md`
-- 测试工程师：`.ai-control/control/agents/agent-test.md`
-- 安全工程师：`.ai-control/control/agents/agent-security.md`
-- 性能工程师：`.ai-control/control/agents/agent-performance.md`
-- 发布审查工程师：`.ai-control/control/agents/agent-release.md`
+生产级主入口（6 个角色）：
+- 产品规格工程师：`.ai-control/control/agents/agent-spec.md`（需求澄清、业务建模、OpenSpec、API 契约）
+- 系统架构师：`.ai-control/control/agents/agent-architect.md`（架构、影响范围、重构切片）
+- 数据库工程师：`.ai-control/control/agents/agent-dba.md`（表结构、SQL、迁移、回滚）
+- 开发工程师：`.ai-control/control/agents/agent-dev.md`（Java/Go/PHP 后端、Vue/React 前端、UI 交互、CRUD 脚手架，按栈读对应章节）
+- 测试工程师：`.ai-control/control/agents/agent-test.md`（设计期写验收用例、实现后执行回填）
+- 发布审查工程师：`.ai-control/control/agents/agent-release.md`（独立二审、安全审查、性能审查、上线前审查）
 
 ## 不可跳过规则
-- 非简单任务必须先读 OpenSpec 规格工程师 `.ai-control/control/agents/agent-openspec.md` 或读取已有 change。
-- 需求模糊、术语不清或需要业务建模时，读产品需求工程师 `.ai-control/control/agents/agent-product.md`。
+- 非简单任务必须先读产品规格工程师 `.ai-control/control/agents/agent-spec.md`（需求建模、OpenSpec、API 契约都在此手册）或读取已有 change。
 - 陌生代码区域或跨模块影响不清时，先读系统架构师 `.ai-control/control/agents/agent-architect.md`。
-- Bug 不允许直接猜修，必须先诊断、复现，再按对应 agent 修复。
+- Bug 不允许直接猜修，必须先诊断、复现，再按对应角色修复。
 - 涉及 DB/SQL/表字段/索引，必须先读数据库工程师 `.ai-control/control/agents/agent-dba.md`。
-- Java Spring Boot CRUD 脚手架必须先读代码生成工程师 `.ai-control/control/agents/agent-codegen.md` 识别 adapter；未确认 adapter 时禁止生成脚手架。
-- 涉及 API 入参/响应/分页/兼容性，必须读 API 契约工程师 `.ai-control/control/agents/agent-api.md`。
-- 涉及页面、组件、交互、视觉，必须读 UI 交互设计师 `.ai-control/control/agents/agent-ui.md`。
-- 涉及 Java 后端实现，读 Java 后端开发工程师 `.ai-control/control/agents/agent-java.md` 和 `.ai-control/control/docs/stacks/SPRING_BOOT.md`。
-- 涉及 Go / Gin 后端实现，读 Go 后端开发工程师 `.ai-control/control/agents/agent-go.md` 和 `.ai-control/control/docs/stacks/GO_GIN.md`。
-- 涉及 PHP 后端实现，读 PHP 后端开发工程师 `.ai-control/control/agents/agent-php.md` 和 `.ai-control/control/docs/stacks/PHP.md`。
-- 涉及 Vue/React 前端实现，读 Web 前端开发工程师 `.ai-control/control/agents/agent-web.md` 和对应 `.ai-control/control/docs/stacks/VUE3.md` 或 `.ai-control/control/docs/stacks/REACT.md`。
-- 涉及 JWT 登录、token、登出或会话安全，读 `.ai-control/control/docs/features/JWT_RULES.md`。
-- 涉及后台菜单、按钮、接口权限或数据范围，读 `.ai-control/control/docs/features/RBAC_RULES.md`。
+- 任何实现（后端/前端/UI/CRUD 脚手架）读开发工程师 `.ai-control/control/agents/agent-dev.md` 的对应章节，并按栈读 `.ai-control/control/rules/` 中的对应规则（索引见 rules/README.md）。
+- CRUD 脚手架必须先按开发工程师手册「代码生成」章节识别 adapter；未确认 adapter 时禁止生成。
+- 涉及 API 入参/响应/分页/兼容性，先读产品规格工程师手册「API 契约」章节和 `.ai-control/control/rules/20-api.md`。
+- 涉及 JWT 登录、token、登出或会话安全，读 `.ai-control/control/rules/21-jwt.md`。
+- 涉及后台菜单、按钮、接口权限或数据范围，读 `.ai-control/control/rules/22-rbac.md`。
+- 测试工程师 `.ai-control/control/agents/agent-test.md` 两阶段介入：设计期写验收用例，实现后执行回填。
 - 实现后必须执行验证，或说明无法验证原因。
-- 交付前必须读发布审查工程师 `.ai-control/control/agents/agent-release.md`。
+- 交付前必须读发布审查工程师 `.ai-control/control/agents/agent-release.md`（含安全、性能审查）。
 
 ## 编码前必须行为
 1. 阅读 `AGENTS.md`、相关 `.ai-control/control/docs/` 和相关 OpenSpec specs/changes。
@@ -148,20 +161,21 @@ openspec/changes/<change-id>/
 8. 如果缺失信息会影响正确性，编码前必须询问。
 
 ## 数据安全
+以下是不可逾越的红线摘要；两阶段确认的完整清单、JOIN 细则和例外条件以 `.ai-control/control/rules/10-db-schema.md` 为唯一权威定义。
+
 - 没有明确需求时，禁止创建或修改表。
 - 没有 migration SQL 时，禁止修改表结构。
 - 未经明确批准，禁止 DROP 表或字段。
 - 只要涉及创建或修改表结构、字段、索引、约束、初始化数据或迁移数据，必须先输出表结构设计审查，并等待用户确认。
-- 用户确认表结构设计审查后，才能输出数据库变更确认包；确认包必须包含目标结构 DDL、本地手动执行 DDL、rollback SQL、联动改动清单、Laravel / Hyperf migration 文件预览（如适用）、建议和待确认项。
-- 用户确认数据库变更确认包前，禁止执行 SQL、写入 Laravel / Hyperf migration 文件，也禁止实现依赖新表结构的代码。
+- 用户确认表结构设计审查后，才能输出数据库变更确认包。
+- 用户确认数据库变更确认包前，禁止执行 SQL、写入 migration 文件，也禁止实现依赖新表结构的代码。
 - 执行数据库写操作前必须获得用户确认，包括 CREATE、UPDATE、DELETE、ALTER、DROP、TRUNCATE。
-- 删除表或截断表前默认必须先备份数据，备份表名为 `原表名_copy_yyyyMMdd`。
+- DROP/TRUNCATE 前默认必须先备份数据，备份表名为 `原表名_copy_yyyyMMdd`。
 - 单个业务动作涉及写入或修改超过一张表时，必须使用事务。
 - 生产 SQL 禁止使用 `SELECT *`。
 - 禁止执行全表 UPDATE/DELETE。
 - JOIN 查询必须确认主表粒度、表关系基数和 `ON` / `USING` 条件，禁止无条件 JOIN 或用 `DISTINCT` / `GROUP BY` 掩盖笛卡尔乘积与重复数据问题。
 - 必须考虑租户隔离、软删除、索引和排序规则一致性。
-- 创建或修改表时，必须遵循 `.ai-control/control/docs/DB_SCHEMA_RULES.md`。
 
 ## 必须澄清的触发条件
 如果以下任一内容不清楚，必须 STOP and ASK：

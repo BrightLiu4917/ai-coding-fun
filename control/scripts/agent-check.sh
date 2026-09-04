@@ -98,7 +98,11 @@ while IFS= read -r file; do
     check_required_references "$file"
   fi
 
-  if [[ "$agent" == "agent-codegen" ]]; then
+  if ! grep -q '^## 停止并询问' "$file"; then
+    error "$file missing '## 停止并询问' section (required by AGENT_BASE)"
+  fi
+
+  if [[ "$agent" == "agent-dev" ]]; then
     if ! grep -q '禁止把 gupo adapter 用于非 gupo 项目' "$file"; then
       error "$file must forbid gupo adapter outside gupo projects"
     fi
@@ -116,6 +120,13 @@ fi
 if [[ -f "$ROOT/profiles/default/profile.toml" ]]; then
   if ! grep -q '"agents"' "$ROOT/profiles/default/profile.toml"; then
     error "profiles/default/profile.toml should install agents"
+  fi
+fi
+
+# 仓库根 AGENTS.md 必须由 control/AGENTS.md 生成，禁止手改后不同步
+if [[ -f "$ROOT/../AGENTS.md" && -x "$ROOT/scripts/sync-agents-md.sh" ]]; then
+  if ! bash "$ROOT/scripts/sync-agents-md.sh" --check >/dev/null 2>&1; then
+    error "root AGENTS.md is out of sync with control/AGENTS.md; edit control/AGENTS.md and run sync-agents-md.sh"
   fi
 fi
 

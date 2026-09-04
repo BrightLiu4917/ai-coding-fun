@@ -13,27 +13,27 @@ agents/agent-<name>.md
 ## 文档命名分层
 
 - 面向用户阅读的手册、教程和流程说明使用中文文件名，例如 `快速开始.md`、`不同项目如何接入.md`。
-- 面向脚本、agent、CI 和规则引用的文件使用稳定英文名，例如 `API_RULES.md`、`SPRING_BOOT_RULES.md`、`docs/stacks/SPRING_BOOT.md`。
+- 面向脚本、agent、CI 和规则引用的文件使用稳定英文名，例如 `API_RULES.md`、`SPRING_BOOT_RULES.md`、`rules/41-spring-boot.md`。
 - 禁止同一类文件同时使用多种命名风格。
 - 中文文件名不得被脚本作为唯一机器入口；脚本入口必须使用英文稳定路径。
 
 当前主入口和中文角色名：
 
 ```text
-agent-product      产品需求工程师
-agent-openspec     OpenSpec 规格工程师
+agent-spec      产品需求工程师
+agent-spec     OpenSpec 规格工程师
 agent-architect    系统架构师
-agent-ui           UI 交互设计师
-agent-web          Web 前端开发工程师
-agent-api          API 契约工程师
-agent-java         Java 后端开发工程师
-agent-go           Go 后端开发工程师
-agent-php          PHP 后端开发工程师
+agent-dev           UI 交互设计师
+agent-dev          Web 前端开发工程师
+agent-spec          API 契约工程师
+agent-dev         Java 后端开发工程师
+agent-dev           Go 后端开发工程师
+agent-dev          PHP 后端开发工程师
 agent-dba          数据库工程师
-agent-codegen      代码生成工程师
+agent-dev      代码生成工程师
 agent-test         测试工程师
-agent-security     安全工程师
-agent-performance  性能工程师
+agent-release     安全工程师
+agent-release  性能工程师
 agent-release      发布审查工程师
 ```
 

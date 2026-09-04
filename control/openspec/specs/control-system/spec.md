@@ -2,7 +2,7 @@
 
 ## 功能模块
 
-- 仓库入口：根目录 `AGENTS.md` 作为 Codex 自动发现入口，根目录 `README.md` 作为人工阅读入口。
+- 仓库入口：根目录 `AGENTS.md` 作为 AI 编码工具（Codex/Kimi/Cursor 等）自动发现入口，根目录 `README.md` 作为人工阅读入口。
 - 仓库资产：控制系统仓库自身的主要资产统一维护在 `control/` 目录。
 - 项目接入：通过交互式或非交互式脚本把控制系统复制到目标项目。
 - 目标项目新安装：根目录保留 `AGENTS.md`、`openspec/`、`CONTEXT.md` 和 `CONTEXT-MAP.md`，控制系统工具资产安装到 `.ai-control/control/`。
@@ -10,7 +10,7 @@
 - 规则分层：通用规则、技术栈规则和功能规则分目录维护。
 - Agent 路由：使用 `agents/agent-*.md` 作为中文角色手册。
 - OpenSpec：使用中文 proposal、design、tasks 和 spec 记录事实源。
-- deepv4 二审：通过 `.agent/deepv4.env` 和 review 脚本执行独立审查。
+- 独立二审：通过 `.agent/review.env` 和 review 脚本执行独立审查。
 
 ## 数据结构
 
@@ -34,7 +34,7 @@
 - `.ai-control/control/profiles/`：目标业务项目中的安装 profile。
 - `.ai-control/control/tools/`：目标业务项目中的确定性工具。
 - `.agent/project.env`：本机覆盖配置，不提交。
-- `.agent/deepv4.env`：deepv4 密钥配置，不提交。
+- `.agent/review.env`：独立二审 密钥配置，不提交。
 - `profiles/<name>/profile.toml`：安装文件清单。
 - `openspec/changes/<change-id>/`：变更记录。
 - `openspec/specs/<capability>/spec.md`：已确认规格。
@@ -51,7 +51,7 @@
 - 目标项目新安装默认使用 `.ai-control/control/` 存放工具资产。
 - 已安装旧结构的目标项目不在本规则中自动迁移。
 - 缺少目标目录时，交互式安装可以询问是否创建；非交互脚本可以创建。
-- deepv4 配置缺失时只提示，不阻塞本地规则使用。
+- 独立二审 配置缺失时只提示，不阻塞本地规则使用。
 
 ## 数据校验规则
 
@@ -64,5 +64,5 @@
 ## 日志说明
 
 - 测试日志写入 `.agent/logs/`。
-- deepv4 输入输出写入 `.agent/reviews/`。
+- 独立二审 输入输出写入 `.agent/reviews/`。
 - `.agent/` 默认忽略，避免密钥和运行产物误提交。

@@ -14,7 +14,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Shell syntax
-        run: bash -n .ai-control/control/scripts/*.sh .ai-control/control/scripts/providers/*.sh
+        run: |
+          shopt -s nullglob
+          files=(.ai-control/control/scripts/*.sh .ai-control/control/scripts/providers/*.sh)
+          [ "${#files[@]}" -gt 0 ] && bash -n "${files[@]}" || echo "No scripts found."
 
       - name: Agent check
         run: bash .ai-control/control/scripts/agent-check.sh

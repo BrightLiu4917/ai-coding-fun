@@ -92,6 +92,7 @@ done < <(
     find "$ROOT" \
   -path "$ROOT/.git" -prune -o \
   -path "$ROOT/.agent" -prune -o \
+  -path "$ROOT/openspec/changes" -prune -o \
   -path "$ROOT/.idea" -prune -o \
   -path "*/.agent" -prune -o \
   -path "*/.git.bak-*" -prune -o \

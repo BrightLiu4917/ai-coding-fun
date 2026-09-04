@@ -2,11 +2,12 @@ name = "go-gin"
 description = "面向 Go / Gin 后端项目，包含 OpenSpec、通用后端、API、数据库、安全、测试和发布规则。"
 items = [
   "AGENTS.md",
-  "CODEX_TASK_TEMPLATE.md",
+  "TASK_TEMPLATE.md",
   "CONTEXT.md",
   "CONTEXT-MAP.md",
   "openspec",
   "docs",
+  "rules",
   "agents",
   "scripts",
   "templates",

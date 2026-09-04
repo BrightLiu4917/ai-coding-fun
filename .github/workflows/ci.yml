@@ -1,0 +1,57 @@
+name: control-system-ci
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+      - codex/**
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Shell syntax
+        run: |
+          shopt -s nullglob
+          bash -n control/scripts/*.sh control/scripts/providers/*.sh
+
+      - name: ShellCheck
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          shopt -s nullglob
+          shellcheck -S warning control/scripts/*.sh control/scripts/providers/*.sh
+
+  self-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Agent check
+        run: bash control/scripts/agent-check.sh
+
+      - name: Route check
+        run: bash control/scripts/route-check.sh
+
+      - name: Docs link check
+        run: bash control/scripts/docs-link-check.sh
+
+      - name: AGENTS.md sync check
+        run: bash control/scripts/sync-agents-md.sh --check
+
+      - name: OpenSpec conflict check
+        run: bash control/scripts/openspec-conflict-check.sh
+
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install bats
+        run: sudo npm install -g bats
+
+      - name: Run control tests
+        run: bash control/scripts/run-control-tests.sh

@@ -144,7 +144,7 @@ if guard_file "$ROOT/openspec/project.md"; then
 - 设计决策和风险必须记录到对应 change 的 \`design.md\`。
 - 实施任务必须记录到对应 change 的 \`tasks.md\`。
 - 实现完成后必须归档已确认规格。
-- Codex 实现前必须确认业务规则，不能自行决定字段、状态、权限或接口契约。
+- AI 助手实现前必须确认业务规则，不能自行决定字段、状态、权限或接口契约。
 - 测试从根目录统一执行 \`bash .ai-control/control/scripts/run-tests.sh\`。
 
 ## 待确认问题
@@ -196,7 +196,7 @@ _状态_: 待确认。
 ## 使用约定
 - 新需求先进入 OpenSpec change。
 - 待确认候选只能用于讨论和建模，不能直接进入代码。
-- 如果 Codex 需要实现代码，必须先确认相关业务规则和 OpenSpec 任务边界。
+- 如果 AI 助手需要实现代码，必须先确认相关业务规则和 OpenSpec 任务边界。
 EOF
   echo "[WRITE] CONTEXT.md"
 fi
