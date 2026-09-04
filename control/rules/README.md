@@ -6,7 +6,7 @@
 - 10-19 数据库：10-db-schema（表结构/SQL/JOIN/两阶段确认）
 - 20-29 接口与功能：20-api、21-jwt、22-rbac、23-crud、24-openapi
 - 30-39 前端：30-frontend、31-vue3、32-react
-- 40-49 后端：40-backend、41-spring-boot、42-go-gin、43-php
+- 40-49 后端：40-backend、41-spring-boot、42-go-gin、43-php、44-java-enum
 - 50-59 质量与交付：50-testing、51-security、52-performance、53-release、54-code-review
 - 60-69 接入适配：60-project-adapter
 

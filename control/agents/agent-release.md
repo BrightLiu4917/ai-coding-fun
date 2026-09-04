@@ -49,6 +49,7 @@ bash .ai-control/control/scripts/run-review.sh
 - Entity/DTO/VO 与数据库表结构是否一致。
 - 多表写入、状态变更、扣减、日志记录是否有事务边界。
 - SQL 是否存在 `SELECT *`、租户隔离缺失、软删除缺失或危险 UPDATE/DELETE。
+- 是否存在魔法值判断（裸数字/裸字符串比较状态）、硬拼的状态文案、未经 `fromCode()` 校验的枚举入参或 `ordinal()` 入库（见 `.ai-control/control/rules/44-java-enum.md`）。
 - API 响应格式、路径、分页结构是否破坏兼容性。
 - 前端是否缺失加载态、空态、错误态、权限态或重复提交防护。
 - 是否暴露敏感字段、异常堆栈、token、密码或隐私数据。

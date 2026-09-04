@@ -32,7 +32,7 @@
 - `AGENTS.md`
 - `.ai-control/control/rules/01-code-change.md`
 - `CONTEXT.md` 或 `CONTEXT-MAP.md`
-- 按栈选读：Java 读 `.ai-control/control/rules/40-backend.md` + `.ai-control/control/rules/41-spring-boot.md`；Go 读 `.ai-control/control/rules/42-go-gin.md`；PHP 读 `.ai-control/control/rules/43-php.md`；前端读 `.ai-control/control/rules/30-frontend.md` + `.ai-control/control/rules/31-vue3.md` 或 `.ai-control/control/rules/32-react.md`
+- 按栈选读：Java 读 `.ai-control/control/rules/40-backend.md` + `.ai-control/control/rules/41-spring-boot.md` + `.ai-control/control/rules/44-java-enum.md`；Go 读 `.ai-control/control/rules/42-go-gin.md`；PHP 读 `.ai-control/control/rules/43-php.md`；前端读 `.ai-control/control/rules/30-frontend.md` + `.ai-control/control/rules/31-vue3.md` 或 `.ai-control/control/rules/32-react.md`
 - 涉及接口时读 `.ai-control/control/rules/20-api.md`；涉及数据库时读 `.ai-control/control/rules/10-db-schema.md`
 - `.ai-control/control/rules/21-jwt.md`，如涉及登录、token 或认证
 - `.ai-control/control/rules/22-rbac.md`，如涉及后台权限
@@ -90,12 +90,22 @@
 - 新增 Controller 路径必须遵循 `.ai-control/control/rules/20-api.md`，只使用 `GET` / `POST`，禁止 `@PathVariable` 路径参数。
 - 路径必须使用小写中横线，禁止驼峰、下划线和大写路径段。
 
+### 枚举与常量
+
+完整规则见 `.ai-control/control/rules/44-java-enum.md`，必须逐项遵守。执行要点：
+
+- 业务判断禁止裸数字/裸字符串（禁止 `status == 1`、`"PAID".equals(x)`），只允许通过枚举比较。
+- 出参状态必须同时返回 code + desc，desc 一律取自枚举，禁止在代码里硬拼状态文案。
+- 入参 code 必须 `fromCode()` 校验，非法值返回参数错误；禁止透传入库。
+- 禁止 `ordinal()` 入库/传输；枚举 `switch` 必须全分支覆盖或 default 抛异常。
+
 ### 禁止事项
 
 - 除非既有项目已经使用 JPA，否则禁止引入 JPA。
 - 禁止在 Controller 中写业务逻辑。
 - 禁止在 Service 中拼接 SQL 字符串。
 - 禁止 `SELECT *`。
+- 禁止魔法值判断、硬拼状态文案和未经校验的枚举 code 透传（见枚举与常量章节）。
 - 禁止无关重构。
 - 禁止伪实现、空方法和 TODO 实现。
 - 禁止直接返回 Entity，除非项目既有约定允许。

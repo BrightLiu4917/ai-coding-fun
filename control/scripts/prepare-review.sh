@@ -155,6 +155,7 @@ write_file_if_exists() {
     printf -- '- 【接口】API 路径、请求、响应、分页、错误码是否破坏既有兼容性？\n'
     printf -- '- 【接口】参数校验、数据不存在、状态不允许等异常路径是否明确且不落 500？\n'
     printf -- '- 【接口】权限、租户和数据可见性是否有缺口？\n'
+    printf -- '- 【枚举】是否存在魔法值判断（裸数字/裸字符串比较状态）、硬拼的状态文案、未经校验的枚举 code 透传或 ordinal() 入库？\n'
   fi
   if has_scope_item "affected_pages"; then
     printf -- '- 【前端】加载态、空态、错误态、权限态和重复提交防护是否完整？\n'
