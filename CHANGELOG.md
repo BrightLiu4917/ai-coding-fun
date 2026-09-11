@@ -107,9 +107,34 @@
 - 自包含增强：WorkBuddy 技能导出时将各角色引用的 rules 全文内嵌为附录快照，空工作区也有完整约束；Claude/Codex 等项目内工具保持引用式不受影响；快照更新提示写入技能正文。
 - 新增自包含断言用例，总测试数 82 → 83。
 
+## 十四、轻量化重构（实测反馈驱动 + GSD 借鉴）
+
+用户多项目实测结论：二审和验收回填是最大时间黑洞，流程仪式偏重。本批做结构性减法：
+
+- **二审默认关，按需外援**：`ai ship` 只跑秒级脚本门禁（JUnit 证据 + 防漂移）；`--review` 主动触发二审；碰 DB/权限/支付时打印建议；`REVIEW_MODE=always` 可恢复每次必审。`--skip-review` 随之废弃（默认即不跑）。
+- **验收回填删除，报告即证据**：删除 test-cases-sync.sh 与 run-tests 回填 trap；test-cases.md 去状态列（设计期契约作用与 TC-ID 约定保留）；门禁改为 `test-cases-check.sh --evidence`——直查 JUnit 报告（存在、无失败、TC-ID 覆盖非手动用例）；手动用例结果由交付说明承载（交付必列项）。证据链更短更硬（表格可被改，报告是框架生成的）。
+- **"待确认"门禁反转（解死锁）**：骨架模板不再预填满篇"待确认"（spec 九章缩为"场景+值域"两章，proposal 哲学引导块压缩为四行问题清单）；ready 门禁只查"## 待确认问题"章节内的未答条目，不再全文扫字样——消除"为过门禁而编造"的激励。
+- **lite --upgrade（解死锁）**：lite 中途越界时平滑升级为完整流程，保留已写内容，只补 spec 骨架，需重新确认；不再"推倒重来"。
+- **文档仪式瘦身**：design.md 从默认骨架移除（跨模块/DB/接口兼容时按模板创建）；tasks.md 砍掉负责人/预计工时等表演字段；交付输出格式改为"只列实际发生变化的项"；归档从硬要求改为大功能建议制；language-check 从默认检查链摘除（脚本保留可手动跑）。
+- **GSD 借鉴**（github.com/open-gsd）：goal-backward 验证（"这事要成立什么必须可观察为真"）写入 agent-test；实现与验证分上下文（Claude 用 subagent、其他工具建议新会话——零成本找回部分二审独立性）；lite 完整性对照 /gsd:quick 补"减仪式不减纪律"条款。
+- 测试联动：删 6 个回填用例、重写 ship/证据门禁用例，总测试数 83 → 78。
+
+预期效果：日常 ship 3-5 分钟 → 10-30 秒；测试链路去掉抄表环节；check 不再逼 AI 编内容；每次交付省数百 token 格式化输出。
+
+## 十五、第十四批缺陷修复（端到端走查驱动）
+
+第十四批只做了单元级验证、未做端到端走查，接缝处藏了 4 个缺陷；本批用模拟项目全流程走查逐一暴露并修复：
+
+- **全手动用例 ship 卡死**：--evidence 无条件要求 JUnit 报告，改文案类 lite 变更（无自动化测试）必被拦。修复：全部用例为"手动"时豁免报告检查，验收由交付说明承载。
+- **--review 主动触发被 auto 无视**：lite 变更主动 `ship --review` 被 REVIEW_MODE=auto 的 lite 跳过逻辑吃掉。修复：launcher 传 REVIEW_FORCED=1，run-review 中强制覆盖为 always（env 文件无法覆盖）。
+- **高风险提示双重误报**：① proposal 模板自带"权限路径"字样触发权限提示（模板改"越权场景"+ grep 排除待确认章节）；② `grep -A5 affected_tables` 越界带出 apis 条目导致 tables=none 也提示涉库（改精确 awk 段判定）。
+- **非 git 仓库刷屏**：prepare-review 在非 git 目录刷整页 git 用法。修复：前置检测，明确报错。
+- 配套：examples 三份用例更新为无状态列新格式；review.env 的 REVIEW_MODE 注释按新语义重写；run-review 清除已废弃的 --skip-review 提示。
+- 端到端走查覆盖五条路径：lite 全手动 ship 秒过 / 完整变更 evidence 核对 / --review 强制执行 / BLOCK 拦截 / 默认不审无误报。
+
 ## 验证状态
 
-- bats：83/83 通过（`bash control/scripts/run-control-tests.sh`）
+- bats：78/78 通过（`bash control/scripts/run-control-tests.sh`）
 - 自检：agent-check（6 agents）、route-check、docs-link-check、AGENTS.md 同步、OpenSpec 冲突检查全部通过
 - 全部 shell 脚本 `bash -n` 语法通过；shellcheck 本地 0 告警（.shellcheckrc 豁免中文引号误报，死变量已清理）
 

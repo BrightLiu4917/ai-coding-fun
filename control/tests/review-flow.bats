@@ -102,21 +102,27 @@ EOF
   grep -q 'REVIEW_VERDICT=PASS' <<<"$output"
 }
 
-@test "ai ship --skip-review 需要原因且留痕" {
+@test "ai ship 默认只跑门禁不跑二审，--review 才触发" {
   cp "$REPO_ROOT/control/templates/ai-launcher.sh" "$PROJ/ai"
   chmod +x "$PROJ/ai"
   mkdir -p "$PROJ/openspec/changes/demo"
-  # 用例门禁先于 skip-review 生效（跳过二审不等于跳过用例回填），给一份已回填的用例
   cat > "$PROJ/openspec/changes/demo/test-cases.md" <<'EOF'
-| 用例ID | 类型 | 状态 |
-|--------|------|------|
-| TC-01 | 正常流 | 通过 |
+| 用例ID | 类型 | 验证方式 |
+|--------|------|----------|
+| TC-01 | 正常流 | 手动 |
 EOF
-  # 无原因 → 报错
-  run "$PROJ/ai" ship demo --skip-review
-  [ "$status" -eq 1 ]
-  # 有原因 → 跳过并留痕
-  run "$PROJ/ai" ship demo --skip-review "二审服务欠费，走人工审查"
+  # 全手动用例 + 无报告目录：evidence 门禁要求报告 → 先给一份报告目录
+  mkdir -p "$PROJ/test-results"
+  cat > "$PROJ/test-results/TEST-x.xml" <<'EOF'
+<?xml version="1.0"?>
+<testsuite tests="1"><testcase classname="T" name="test_TC01_manualplaceholder"/></testsuite>
+EOF
+  # 默认：门禁通过、二审未运行
+  run "$PROJ/ai" ship demo
   [ "$status" -eq 0 ]
-  grep -q 'SKIPPED_BY_USER: 二审服务欠费' "$PROJ/.agent/reviews/review-skip.log"
+  grep -q 'SHIP_GATES_PASSED' <<<"$output"
+  ! grep -q 'REVIEW_RUNNING' <<<"$output"
+  # --review：触发二审链（未配置二审 → 记录跳过，但确实进入了 review 流程）
+  run "$PROJ/ai" ship demo --review
+  grep -q 'REVIEW' <<<"$output"
 }

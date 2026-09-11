@@ -74,7 +74,7 @@ OpenSpec 文档必须遵守 `openspec/config.yaml`：业务说明、章节标题
 ```text
 openspec/changes/<change-id>/
 ├── proposal.md
-├── design.md
+├── design.md        （可选：跨模块/数据库/接口兼容时创建）
 ├── tasks.md
 ├── test-cases.md
 └── specs/
@@ -96,6 +96,9 @@ openspec/changes/<change-id>/
 
 用户确认 OpenSpec change 前，禁止进入实现。测试用例是验收契约：实现必须向已确认用例收敛，执行阶段禁止为迁就实现而修改用例；确需修改时必须重新经用户确认。
 
+验收以原始证据为准：自动化用例看 JUnit 报告（测试名含 TC-ID，报告存在且无失败），手动用例的执行结果逐条写入交付说明；不维护状态表格。
+验证工作尽量在独立上下文中进行：Claude Code 下由测试工程师 subagent 执行；其他工具建议新开会话验证——上下文不膨胀，验证者也不带实现过程的偏见。
+
 ### lite 变更（小需求快速通道）
 同时满足以下条件的非简单任务，可使用 `ai-dev.sh feature <change-id> --lite` 走快速通道，只需 proposal.md、tasks.md、test-cases.md 三个文件（proposal 头部标注 `变更级别: lite`）：
 1. 不涉及数据库表结构、字段、索引、SQL 变更。
@@ -103,8 +106,8 @@ openspec/changes/<change-id>/
 3. 不涉及权限、租户、支付、状态流转或删除行为。
 4. 改动范围可明确列出，且有可执行的验收用例。
 
-lite 变更仍需用户确认后才能实现。实现过程中发现触碰上述任一红线时，必须停止并升级为完整流程；`impact-check` 会强制拦截声明了数据库或 API 影响的 lite 变更。
-实现和验证完成后，应将已确认行为归档到 `openspec/specs/`。
+lite 减的是文档仪式，不减工程纪律：同样要求原子提交、可验证的用例和交付说明。lite 变更仍需用户确认后才能实现。实现过程中发现触碰上述任一红线时，必须停止并升级为完整流程；`impact-check` 会强制拦截声明了数据库或 API 影响的 lite 变更。
+大型功能建议在验证完成后将已确认行为归档到 `openspec/specs/`（沉淀长期事实源）；中小变更不强制归档。
 
 ## 自然语言意图路由
 用户用自然语言表达意图时，按下表路由；不要求用户记忆命令、参数或关键字。
@@ -113,7 +116,7 @@ lite 变更仍需用户确认后才能实现。实现过程中发现触碰上述
 |---|---|
 | 新功能：“加个 XX”“帮我做 XX”“我想要 XX” | 1) 影响探测：先检索代码，列出本需求可能触碰的文件、表、API；2) 依据探测证据按任务分级判级（lite 条件见下）；3) 生成对应骨架（`./ai new <id>` 或 `./ai new <id> --lite`）；4) 确认单必须标注“级别 + 判级理由”并等待用户确认 |
 | 小改动：“改个文案”“调下样式”“修个小问题” | 同上，通常判为 lite；判级理由照样要给 |
-| 验证：“测一下”“跑下测试”“验证一下” | `./ai test <change-id>`，汇报测试结果和用例回填情况 |
+| 验证：“测一下”“跑下测试”“验证一下” | `./ai test <change-id>`，汇报测试结果（JUnit 报告即证据） |
 | 交付：“能上线吗”“检查下能不能交付”“发布” | `./ai ship <change-id>`，汇报门禁结果和残余风险 |
 | 数据库：“表加个字段”“建张表” | 切数据库工程师，先输出表结构设计审查，用户确认前禁止执行 |
 | 同步：“规则改了”“重新生成配置” | `./ai sync` |
@@ -133,7 +136,7 @@ lite 变更仍需用户确认后才能实现。实现过程中发现触碰上述
 - 系统架构师：`.ai-control/control/agents/agent-architect.md`（架构、影响范围、重构切片）
 - 数据库工程师：`.ai-control/control/agents/agent-dba.md`（表结构、SQL、迁移、回滚）
 - 开发工程师：`.ai-control/control/agents/agent-dev.md`（Java/Go/PHP 后端、Vue/React 前端、UI 交互、CRUD 脚手架，按栈读对应章节）
-- 测试工程师：`.ai-control/control/agents/agent-test.md`（设计期写验收用例、实现后执行回填）
+- 测试工程师：`.ai-control/control/agents/agent-test.md`（设计期写验收用例、实现后按报告验收）
 - 发布审查工程师：`.ai-control/control/agents/agent-release.md`（独立二审、安全审查、性能审查、上线前审查）
 
 ## 不可跳过规则
@@ -146,7 +149,7 @@ lite 变更仍需用户确认后才能实现。实现过程中发现触碰上述
 - 涉及 API 入参/响应/分页/兼容性，先读产品规格工程师手册「API 契约」章节和 `.ai-control/control/rules/20-api.md`。
 - 涉及 JWT 登录、token、登出或会话安全，读 `.ai-control/control/rules/21-jwt.md`。
 - 涉及后台菜单、按钮、接口权限或数据范围，读 `.ai-control/control/rules/22-rbac.md`。
-- 测试工程师 `.ai-control/control/agents/agent-test.md` 两阶段介入：设计期写验收用例，实现后执行回填。
+- 测试工程师 `.ai-control/control/agents/agent-test.md` 两阶段介入：设计期写验收用例，实现后以 JUnit 报告为证据验收。
 - 实现后必须执行验证，或说明无法验证原因。
 - 交付前必须读发布审查工程师 `.ai-control/control/agents/agent-release.md`（含安全、性能审查）。
 
@@ -196,7 +199,9 @@ lite 变更仍需用户确认后才能实现。实现过程中发现触碰上述
 - OpenSpec 规格与现有代码冲突
 
 ## 交付输出格式
-必须包含：
+只列实际发生变化的项，无变化的项不要写"无"占位；但只要发生了对应变化，该项必须完整（如有 SQL 必须附回滚）。有手动用例时，必须逐条报告执行结果。
+
+按需包含：
 - 实施计划
 - OpenSpec change/spec 变化，如有
 - 变更文件

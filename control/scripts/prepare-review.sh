@@ -26,6 +26,11 @@ done
 
 mkdir -p "$REVIEW_DIR"
 
+if ! git -C "$PROJECT_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+  echo "REVIEW_PREPARE_FAILED: 项目不是 git 仓库，无法生成变更 diff（独立二审依赖 git）。" >&2
+  exit 2
+fi
+
 # 发往外部 API 的 diff 必须排除的敏感文件（密钥、证书、生产配置）。
 # 注意：git pathspec 的 **/ 前缀不匹配仓库根目录文件，必须同时给出根目录与嵌套两种形式。
 SENSITIVE_EXCLUDES=(

@@ -26,6 +26,7 @@ Commands:
   init [--force]              初始化最小项目卡片，包含访问控制模式，不写代码
   feature <change-id> [--force] 创建 OpenSpec 功能变更骨架（五件套完整流程）
   feature <change-id> --lite    小需求快速通道：只生成 proposal/tasks/test-cases，不允许涉及数据库和 API
+  feature <change-id> --upgrade lite 升级为完整流程：保留已写内容，补 spec 骨架，需重新确认
   ready <change-id>           检查 OpenSpec 是否可以进入实现
   test                        运行项目测试
   review                      准备并运行独立二审
@@ -243,7 +244,7 @@ write_review_env() {
     printf 'REVIEW_TIMEOUT_SECONDS=%s\n' "$(shell_quote "180")"
     printf '# provider: openai-compatible（DeepSeek/Kimi/通义/GLM/GPT/Ollama 等）或 anthropic（Claude 官方 API）\n'
     printf 'REVIEW_PROVIDER=%s\n' "$(shell_quote "openai-compatible")"
-    printf '# 触发策略: auto（lite 跳过）| always | never\n'
+    printf '# 触发策略（ship 默认不跑二审，--review 主动触发）: always=每次 ship 必审 | auto/never=仅 --review 时跑\n'
     printf 'REVIEW_MODE=%s\n' "$(shell_quote "auto")"
   } > "$file"
   chmod 600 "$file" 2>/dev/null || true
@@ -329,9 +330,26 @@ validate_change_id() {
 }
 
 contains_unresolved() {
+  # 只检查各文档"## 待确认问题"章节内是否还有未答条目（含"- 待确认"或问题小节且无"已确认"标记）。
+  # 不再全文扫描"待确认"字样——避免逼 AI 为过门禁而编造内容（那违反"禁止发明"红线）。
   local change_dir="$1"
   local output_file="$2"
-  grep -RInE '(^|[[:space:]-])(待确认[:：]|待确认$)|尚未确认|不能直接实现|真实实现前必须确认' "$change_dir" --include '*.md' >"$output_file" 2>/dev/null
+  : > "$output_file"
+  local file
+  while IFS= read -r file; do
+    awk -v fname="${file#$PROJECT_ROOT/}" '
+      /^## 待确认问题/ { in_sec=1; next }
+      in_sec && /^## /  { in_sec=0 }
+      in_sec && /^[[:space:]]*(-|###)[[:space:]]*/ {
+        line=$0
+        # 已答的条目应标注"已确认"或"已解决"，其余视为未答
+        if (line !~ /已确认|已解决|无待确认|暂无/) {
+          printf "%s: %s\n", fname, line
+        }
+      }
+    ' "$file" >> "$output_file"
+  done < <(find "$change_dir" -type f -name '*.md' 2>/dev/null | sort)
+  [[ -s "$output_file" ]]
 }
 
 cmd_init() {
@@ -438,6 +456,7 @@ cmd_feature() {
   local change_id=""
   FORCE=0
   LITE=0
+  UPGRADE=0
   while [[ "$#" -gt 0 ]]; do
     case "$1" in
       --force)
@@ -446,6 +465,10 @@ cmd_feature() {
         ;;
       --lite)
         LITE=1
+        shift
+        ;;
+      --upgrade)
+        UPGRADE=1
         shift
         ;;
       -*)
@@ -470,6 +493,38 @@ cmd_feature() {
   local access_control_mode="${ACCESS_CONTROL_MODE:-pending}"
   local access_control_text
   access_control_text="$(describe_access_control_mode "$access_control_mode")"
+
+  # lite 升级为完整流程：保留已写内容，去掉 lite 标记，只补缺失的 spec 骨架。
+  # 替代"推倒重来"——升级后影响范围已变，必须重新经用户确认。
+  if [[ "$UPGRADE" -eq 1 ]]; then
+    [[ -d "$change_dir" ]] || fail "change 不存在，无法升级: $change_id"
+    if grep -q '^变更级别: lite' "$change_dir/proposal.md" 2>/dev/null; then
+      local tmp_upgrade
+      tmp_upgrade="$(mktemp)"
+      grep -v '^变更级别: lite' "$change_dir/proposal.md" > "$tmp_upgrade"
+      mv "$tmp_upgrade" "$change_dir/proposal.md"
+      info "已移除 lite 标记。"
+    fi
+    mkdir -p "$change_dir/specs/$capability"
+    FORCE=0
+    write_file "$change_dir/specs/$capability/spec.md" "# ${change_id} 规格
+
+## 场景
+（补全：用户在什么情况下做什么、系统给出什么可观察结果）
+
+#### 场景：（场景名）
+- （给定…时…则…）
+
+## 值域
+（补全：涉及的字段、枚举、状态和约束；来源必须是已确认事实）
+
+## 待确认问题
+- （没有则写：无待确认）"
+    info ""
+    info "已升级为完整流程：既有 proposal/tasks/test-cases 全部保留。"
+    info "注意：升级意味着影响范围变化，必须重新经用户确认；涉及数据库时先走数据库工程师两阶段确认。"
+    return 0
+  fi
 
   # 小需求快速通道：只生成 proposal + tasks + test-cases 三个轻量文件。
   # 门禁保证 lite 不被滥用：影响范围声明了数据库或接口时，impact-check 会要求升级为完整流程。
@@ -509,27 +564,26 @@ affected_agents:
 
     write_file "$change_dir/test-cases.md" "# 测试用例
 
-> lite 变更同样需要验收用例；实现后回填状态。
+> lite 变更同样需要验收用例；验收以 JUnit 报告或交付说明中的手动验证结果为证据。
 
 ## 用例清单
 
-| 用例ID | 关联场景 | 类型 | 前置条件 | 步骤 | 预期结果 | 验证方式 | 状态 |
-|--------|----------|------|----------|------|----------|----------|------|
-| TC-01 | 待确认 | 正常流 | 待确认 | 待确认 | 待确认 | 手动 | 已设计 |
+| 用例ID | 关联场景 | 类型 | 前置条件 | 步骤 | 预期结果 | 验证方式 |
+|--------|----------|------|----------|------|----------|----------|
+| TC-01 | （补全） | 正常流 | （补全） | （补全） | （补全） | 手动 |
 
 - 类型：正常流 / 异常流 / 权限 / 边界 / 兼容性 / 并发
-- 验证方式：单测 / 集成 / E2E / 手动
-- 状态：已设计 / 通过 / 失败"
+- 验证方式：单测 / 集成 / E2E / 手动（手动用例的执行结果写入交付说明）"
 
     info ""
     info "lite 变更骨架已生成（proposal / tasks / test-cases）。"
-    info "注意：lite 不允许涉及数据库表或 API 契约；如需涉及，请不带 --lite 重新生成完整骨架。"
+    info "注意：lite 不允许涉及数据库表或 API 契约；如需涉及，运行 feature <change-id> --upgrade 升级（保留已写内容）。"
     info ""
     info "复制给 AI 助手："
     cat <<EOF
 请读取 openspec/changes/${change_id}（lite 变更）。
 补全需求说明、影响文件和测试用例，列出待确认问题。
-本变更不涉及数据库和 API 契约；如发现需要涉及，停止并告知我升级为完整流程。
+本变更不涉及数据库和 API 契约；如发现需要涉及，停止并运行 ${AI_DEV_COMMAND} feature ${change_id} --upgrade 升级（保留已写内容），升级后重新请求确认。
 不要直接写代码。
 EOF
     return 0
@@ -540,13 +594,13 @@ EOF
   write_file "$change_dir/proposal.md" "# 变更提案：${change_id}
 
 ## 项目背景
-待确认：说明为什么要做这个功能。
+（补全：为什么要做这个功能）
 
 ## 项目目标
-待确认：说明用户目标和业务价值。
+（补全：用户目标和业务价值）
 
 ## 功能范围
-- 待确认：本次要做什么。
+- （补全：本次要做什么）
 
 ## 影响范围
 \`\`\`yaml
@@ -563,121 +617,36 @@ affected_agents:
 \`\`\`
 
 ## 非目标
-- 待确认：本次明确不做什么。
-
-## 风险说明
-- 待确认：字段、状态、权限、表结构、API 和响应格式确认前不能实现。
+- （补全：本次明确不做什么）
 
 ## 待确认问题
-### 问题 1：访问控制方式如何确定？
-- 需要确认：本功能由本服务建设 RBAC、外部系统负责访问控制，还是不适用访问控制。
-- 建议方案：优先沿用项目级访问控制模式：${access_control_text}。
-- 推荐原因：保持新功能和项目级权限治理一致，避免单个功能绕过安全边界。
-- 影响范围：影响后端鉴权、前端菜单/按钮、无权限处理、越权处理和测试用例。
-- 可选方案：本服务 RBAC；外部权限服务/网关/IAM/SSO；当前功能明确不适用。
-- 默认处理：如用户确认，才按建议方案进入设计和实现；未确认前不得写入已确认规格。
+- 访问控制：本功能沿用项目级模式（${access_control_text}）还是另有要求？
+- 数据表：涉及哪些表/字段/索引？（涉及则必须走数据库工程师两阶段确认）
+- API 契约：路径、请求、响应、分页、错误码？（遵循 rules/20-api.md）
+- 验收标准：最小可验证路径、失败路径、越权场景分别是什么？"
 
-### 问题 2：数据表和字段如何设计？
-- 需要确认：本功能涉及哪些表、字段、索引、审计字段、租户字段和软删除规则。
-- 建议方案：先设计最小可验证表结构，只包含本次闭环必须字段。
-- 推荐原因：减少一次性建模过度，降低迁移和回滚风险。
-- 影响范围：影响 Entity、Mapper/XML、DTO、VO、SQL 迁移、回滚和测试数据。
-- 可选方案：新建表；复用已有表；先不落库只做只读能力。
-- 默认处理：如用户确认，才按建议方案进入设计和实现；未确认前不得写入已确认规格。
-
-### 问题 3：API 请求和响应如何定义？
-- 需要确认：接口路径、请求字段、响应结构、错误码、分页格式和兼容性。
-- 建议方案：遵循 \`.ai-control/control/rules/20-api.md\`，只使用 GET/POST，不使用路径参数，对外 ID 按字符串。
-- 推荐原因：保持前后端契约一致，避免长整型 ID 精度丢失和接口风格混乱。
-- 影响范围：影响 Controller、DTO、VO、前端 API 调用、错误态和联调测试。
-- 可选方案：新增接口；复用既有接口；先只定义契约不实现。
-- 默认处理：如用户确认，才按建议方案进入设计和实现；未确认前不得写入已确认规格。
-
-### 问题 4：测试和验收标准是什么？
-- 需要确认：本功能最小可验证路径、失败路径、权限路径和回归范围。
-- 建议方案：至少覆盖正常流程、参数错误、无权限或越权、数据不存在和构建/测试命令。
-- 推荐原因：让 AI 助手 和独立二审能基于证据判断实现是否可交付。
-- 影响范围：影响单元测试、集成测试、前端构建、手动验收和发布审查。
-- 可选方案：自动化测试；最小脚本验证；人工关键路径验证。
-- 默认处理：如用户确认，才按建议方案进入设计和实现；未确认前不得写入已确认规格。"
-
-  write_file "$change_dir/design.md" "# 设计说明：${change_id}
-
-## 需求理解
-待确认。
-
-## 系统架构
-待确认。
-
-## 影响范围
-\`\`\`yaml
-affected_files:
-  - none
-affected_tables:
-  - none
-affected_apis:
-  - none
-affected_pages:
-  - none
-affected_agents:
-  - agent-architect
-  - agent-spec
-  - agent-dba
-  - agent-test
-\`\`\`
-
-## 数据库设计
-待确认。
-
-## 接口设计
-待确认。API 路径必须遵循 \`.ai-control/control/rules/20-api.md\`。
-
-## 权限设计
-- 访问控制模式：${access_control_text}
-- 本服务是否建设 RBAC：$(rbac_in_service_text "$access_control_mode")
-- 责任系统：待确认。
-- 允许主体或角色：待确认。
-- 权限码或权限点：待确认；如果由外部系统负责，可写外部权限标识或“不由本服务维护”。
-- 菜单权限：待确认；如不适用必须写明原因。
-- 按钮权限：待确认；如不适用必须写明原因。
-- 无权限处理：待确认。
-- 越权处理：待确认。
-- 数据范围：待确认。
-- 后台功能必须确认访问控制方案；如果由外部系统负责，必须写清责任系统、传递凭证、失败处理和越权处理。
-
-## 验证方案
-待确认。"
+  # design.md 不再默认生成：涉及跨模块、数据库、接口兼容或状态流转时，
+  # 由 AI 按模板（templates/openspec-change/design.md）按需创建。
 
   write_file "$change_dir/tasks.md" "# 任务清单
 
-## 需求确认
-- [ ] 优先级：高；状态：待处理；负责人：用户/AI 助手；预计工时：30 分钟；验收标准：字段、状态、权限、API 和响应格式已确认。
-
-## 设计确认
-- [ ] 优先级：高；状态：待处理；负责人：AI 助手；预计工时：30 分钟；验收标准：数据库、接口、权限和测试方案已确认。
-
-## 实现
-- [ ] 优先级：中；状态：待处理；负责人：AI 助手；预计工时：待确认；验收标准：按已确认 OpenSpec 最小切片实现。
-
-## 验证
-- [ ] 优先级：高；状态：待处理；负责人：AI 助手；预计工时：30 分钟；验收标准：运行 \`${AI_DEV_COMMAND} test\` 并记录结果。
-
-## 审查
-- [ ] 优先级：中；状态：待处理；负责人：AI 助手/二审；预计工时：30 分钟；验收标准：完成发布审查或独立二审。"
+- [ ] 需求确认：字段、状态、权限、API 和响应格式已确认。
+- [ ] 实现：按已确认 OpenSpec 最小切片实现。
+- [ ] 验证：运行 \`${AI_DEV_COMMAND} test\`，JUnit 报告全绿。
+- [ ] 交付：过 \`ai ship\` 门禁；高风险变更建议 \`ai ship --review\`。"
 
   write_file "$change_dir/test-cases.md" "# 测试用例
 
-> 设计阶段由测试工程师产出，随 change 一起确认；实现后回填状态，发布审查前不得残留“已设计”。
+> 设计期由测试工程师产出，随 change 一起确认；验收以 JUnit 报告为证据（测试名带用例ID），不维护状态列。
 
 ## 用例清单
 
-| 用例ID | 关联场景 | 类型 | 前置条件 | 步骤 | 预期结果 | 验证方式 | 状态 |
-|--------|----------|------|----------|------|----------|----------|------|
-| TC-01 | 待确认 | 正常流 | 待确认 | 待确认 | 待确认 | 单测 | 已设计 |
+| 用例ID | 关联场景 | 类型 | 前置条件 | 步骤 | 预期结果 | 验证方式 |
+|--------|----------|------|----------|------|----------|----------|
+| TC-01 | （补全） | 正常流 | （补全） | （补全） | （补全） | 单测 |
 
 - 类型：正常流 / 异常流 / 权限 / 边界 / 兼容性 / 并发
-- 验证方式：单测 / 集成 / E2E / 手动
-- 状态：已设计 / 通过 / 失败
+- 验证方式：单测 / 集成 / E2E / 手动（手动用例的执行结果写入交付说明）
 
 ## 测试命令
 
@@ -693,47 +662,41 @@ ${AI_DEV_COMMAND} test
 
   write_file "$change_dir/specs/$capability/spec.md" "# ${change_id} 规格
 
-## 功能模块
-待确认。
+## 场景
+（补全：用户在什么情况下做什么、系统给出什么可观察结果；每个场景一小节。
+涉及状态流转、权限或异常处理时在对应场景内写清，不单独开章节。）
 
-## 业务流程
-待确认。
+#### 场景：（场景名）
+- （给定…时…则…）
 
-## 状态流转
-待确认。
-
-## 数据结构
-待确认。
-
-## 接口设计
-待确认。
-
-## 权限设计
-待确认。
-
-## 异常处理
-待确认。
-
-## 数据校验规则
-待确认。
-
-## 日志说明
-待确认。
+## 值域
+（补全：本功能涉及的字段、枚举值、状态和约束；来源必须是已确认事实，禁止发明。）
 
 ## 待确认问题
-### 问题 1：能力边界如何最终确认？
-- 需要确认：本规格的功能模块、业务流程、状态流转、数据结构、接口、权限和异常处理哪些已经确认。
-- 建议方案：只把用户已确认内容写入规格；未确认内容继续保留在 change 的 proposal/design。
-- 推荐原因：避免把建议字段、建议状态、建议权限误写成已确认事实。
-- 影响范围：影响后续实现、测试、二审和归档。
-- 可选方案：先只确认最小可验证切片；或继续补充 OpenSpec 后再实现。
-- 默认处理：如用户确认，才按建议方案进入设计和实现；未确认前不得写入已确认规格。"
+- （没有则写：无待确认）"
 
   info ""
   info "复制给 AI 助手："
+
+  # 根据影响范围动态生成本次需要读的规则清单
+  RULES_HINT="基础必读：.ai-control/control/rules/01-code-change.md + 对应栈规则。"
+  if grep -qE '^\s*-[^\n]*[a-zA-Z]' <(sed -n '/^## 影响范围/,/^## /p' "$change_dir/proposal.md" 2>/dev/null | sed -n '/^affected_tables/,/^[^ ]/p' | head -10) 2>/dev/null && \
+     ! grep -qE '^\s*-\s*none\s*$' <(sed -n '/^## 影响范围/,/^## /p' "$change_dir/proposal.md" 2>/dev/null | sed -n '/^affected_tables/,/^[^ ]/p' | head -10) 2>/dev/null; then
+    RULES_HINT="$RULES_HINT 必须读取：.ai-control/control/rules/10-db-schema.md。"
+  fi
+  if grep -qE '^\s*-[^\n]*[a-zA-Z]' <(sed -n '/^## 影响范围/,/^## /p' "$change_dir/proposal.md" 2>/dev/null | sed -n '/^affected_apis/,/^[^ ]/p' | head -10) 2>/dev/null && \
+     ! grep -qE '^\s*-\s*none\s*$' <(sed -n '/^## 影响范围/,/^## /p' "$change_dir/proposal.md" 2>/dev/null | sed -n '/^affected_apis/,/^[^ ]/p' | head -10) 2>/dev/null; then
+    RULES_HINT="$RULES_HINT 必须读取：.ai-control/control/rules/20-api.md。"
+  fi
+  if grep -qE '^\s*-[^\n]*[a-zA-Z]' <(sed -n '/^## 影响范围/,/^## /p' "$change_dir/proposal.md" 2>/dev/null | sed -n '/^affected_pages/,/^[^ ]/p' | head -10) 2>/dev/null && \
+     ! grep -qE '^\s*-\s*none\s*$' <(sed -n '/^## 影响范围/,/^## /p' "$change_dir/proposal.md" 2>/dev/null | sed -n '/^affected_pages/,/^[^ ]/p' | head -10) 2>/dev/null; then
+    RULES_HINT="$RULES_HINT 前端相关：.ai-control/control/rules/30-frontend.md + 对应栈规则（31-vue3 / 32-react）。"
+  fi
+
   cat <<EOF
 请读取 openspec/changes/${change_id}。
-先补全需求理解、功能范围、表结构影响、API、访问控制/RBAC、测试计划和待确认问题。
+本次规则要求：${RULES_HINT}
+按规则约束补全需求理解、功能范围和待确认问题。不需要读本次未涉及的规则。
 不要直接写代码。
 EOF
 }

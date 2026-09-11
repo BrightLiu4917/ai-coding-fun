@@ -5,8 +5,8 @@ set -euo pipefail
 #
 #   ai new <id> [--lite]   创建变更骨架（--lite 小需求快速通道）
 #   ai check <id>          校验 change 是否可请求用户确认
-#   ai test [<id>]         跑测试；带 <id> 时自动回填该 change 的用例状态
-#   ai ship <id> [--skip-review "原因"]  发布门禁：用例回填检查 + 独立二审（跳过必须留痕）
+#   ai test [<id>]         跑测试；JUnit 报告即验收证据（测试名带 TC-ID）
+#   ai ship <id> [--review]  发布门禁：JUnit 证据 + 防漂移（二审默认不跑，--review 或 REVIEW_MODE=always 才跑）
 #   ai sync                重新生成所有 AI 工具适配文件
 #   ai doctor              环境体检
 #   ai upgrade [--source <控制系统仓库>]  升级框架文件（不碰用户数据，升级前自动备份）
@@ -52,16 +52,12 @@ case "$CMD" in
     ;;
   ship)
     change_id=""
-    skip_reason=""
+    run_review=0
     while [[ "$#" -gt 0 ]]; do
       case "$1" in
-        --skip-review)
-          skip_reason="${2:-}"
-          if [[ -z "$skip_reason" ]]; then
-            echo "用法: ai ship <change-id> --skip-review \"原因\"（跳过必须留痕）" >&2
-            exit 1
-          fi
-          shift 2
+        --review)
+          run_review=1
+          shift
           ;;
         *)
           change_id="$1"
@@ -70,24 +66,49 @@ case "$CMD" in
       esac
     done
     if [[ -z "$change_id" ]]; then
-      echo "用法: ai ship <change-id> [--skip-review \"原因\"]" >&2
+      echo "用法: ai ship <change-id> [--review]" >&2
       exit 1
     fi
     change_dir="$SELF_DIR/openspec/changes/$change_id"
+    # 脚本门禁：用例证据（JUnit 报告直查）+ 规格防漂移
     if [[ -d "$change_dir" && -x "$SCRIPTS/test-cases-check.sh" ]]; then
-      bash "$SCRIPTS/test-cases-check.sh" --require-filled "$change_dir"
+      bash "$SCRIPTS/test-cases-check.sh" --evidence "$change_dir"
     fi
     if [[ -d "$change_dir" && -x "$SCRIPTS/spec-drift-check.sh" ]]; then
       bash "$SCRIPTS/spec-drift-check.sh" "$change_dir" "$SELF_DIR" || true
     fi
-    if [[ -n "$skip_reason" ]]; then
-      mkdir -p "$SELF_DIR/.agent/reviews"
-      printf '%s\t%s\tSKIPPED_BY_USER: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$change_id" "$skip_reason" \
-        >> "$SELF_DIR/.agent/reviews/review-skip.log"
-      echo "已跳过独立二审并留痕: $skip_reason"
-      exit 0
+    # 独立二审默认不跑（按需外援）；REVIEW_MODE=always 时强制跑
+    review_mode=""
+    for env_file in "$SELF_DIR/.agent/review.env" "$SELF_DIR/.agent/deepv4.env"; do
+      [[ -f "$env_file" ]] && review_mode="$(grep -E '^REVIEW_MODE=' "$env_file" | tail -1 | cut -d= -f2- | tr -d "'\"")" && break
+    done
+    if [[ "$run_review" -eq 1 || "$review_mode" == "always" ]]; then
+      # 主动触发（--review）必须无条件执行，覆盖 REVIEW_MODE=auto 的 lite 跳过逻辑
+      forced=0
+      [[ "$run_review" -eq 1 ]] && forced=1
+      OPENSPEC_CHANGE_ID="$change_id" REVIEW_FORCED="$forced" exec bash "$SCRIPTS/ai-dev.sh" review
     fi
-    OPENSPEC_CHANGE_ID="$change_id" exec bash "$SCRIPTS/ai-dev.sh" review
+    # 高风险提示：碰表/权限/支付建议主动二审（affected_tables 用精确的 yaml 段判定）
+    touches_tables=0
+    if [[ -f "$change_dir/proposal.md" ]]; then
+      if awk '
+        /^[[:space:]]*affected_tables:/ { in_key=1; next }
+        in_key && /^[[:space:]]*[a-zA-Z_]+:/ { in_key=0 }
+        in_key && /^[[:space:]]*-[[:space:]]*/ {
+          item=$0; sub(/^[[:space:]]*-[[:space:]]*/, "", item)
+          if (item != "" && item != "none") found=1
+        }
+        END { exit found ? 0 : 1 }
+      ' "$change_dir/proposal.md"; then
+        touches_tables=1
+      fi
+    fi
+    if [[ "$touches_tables" -eq 1 ]]; then
+      echo "提示：本变更涉及数据库，建议运行 ai ship $change_id --review 做独立二审。"
+    elif [[ -f "$change_dir/proposal.md" ]] && sed '/^## 待确认问题/,$d' "$change_dir/proposal.md" | grep -qE '支付|权限|状态流转' 2>/dev/null; then
+      echo "提示：本变更涉及权限/支付/状态流，建议运行 ai ship $change_id --review 做独立二审。"
+    fi
+    echo "SHIP_GATES_PASSED: 门禁全部通过（二审未运行；需要时 ai ship $change_id --review）。"
     ;;
   sync)
     if [[ -x "$SCRIPTS/export-adapters.sh" ]]; then

@@ -33,10 +33,7 @@ if [[ -x "$(dirname "$0")/test-cases-check.sh" ]]; then
   "$(dirname "$0")/test-cases-check.sh" "$CHANGE_DIR" || fail=1
 fi
 
-if [[ -x "$(dirname "$0")/openspec-language-check.sh" ]]; then
-  "$(dirname "$0")/openspec-language-check.sh" "$CHANGE_DIR" || fail=1
-fi
-
+# 语言规范检查已从默认链摘除（误报多、价值低）；需要时手动运行 openspec-language-check.sh
 if [[ ! -d "$CHANGE_DIR/specs" ]]; then
   echo "[WARN] Missing specs delta directory: $CHANGE_DIR/specs"
 fi

@@ -64,10 +64,10 @@ has_scope_item() {
 
 if grep -Eq '^变更级别:[[:space:]]*lite' "$CHANGE_DIR/proposal.md" 2>/dev/null; then
   if has_scope_item "affected_tables" "$CHANGE_DIR/proposal.md"; then
-    error "lite 变更不允许涉及数据库表（affected_tables 非 none）；请升级为完整流程"
+    error "lite 变更不允许涉及数据库表（affected_tables 非 none）；请运行 feature <change-id> --upgrade 升级为完整流程（保留已写内容）"
   fi
   if has_scope_item "affected_apis" "$CHANGE_DIR/proposal.md"; then
-    error "lite 变更不允许涉及 API 契约（affected_apis 非 none）；请升级为完整流程"
+    error "lite 变更不允许涉及 API 契约（affected_apis 非 none）；请运行 feature <change-id> --upgrade 升级为完整流程（保留已写内容）"
   fi
 fi
 

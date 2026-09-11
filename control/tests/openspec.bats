@@ -104,18 +104,53 @@ PY
   grep -q '权限' <<<"$output"
 }
 
-@test "--require-filled 检出残留的已设计用例" {
+@test "--evidence 按 JUnit 报告核对：缺失/失败拦截，全绿通过" {
   cat > "$CHANGE/test-cases.md" <<'EOF'
-| 用例ID | 类型 | 状态 |
-|--------|------|------|
-| TC-01 | 正常流 | 通过 |
-| TC-02 | 异常流 | 已设计 |
+| 用例ID | 类型 | 验证方式 |
+|--------|------|----------|
+| TC-01 | 正常流 | 集成 |
+| TC-02 | 异常流 | 单测 |
+| TC-03 | 边界 | 手动 |
 EOF
-  run bash "$SCRIPTS_DIR/test-cases-check.sh" "$CHANGE"
-  [ "$status" -eq 0 ]
-  run bash "$SCRIPTS_DIR/test-cases-check.sh" --require-filled "$CHANGE"
+  REPORTS="$BATS_TEST_TMPDIR/reports"
+  mkdir -p "$REPORTS"
+  # 只有 TC-01 有通过记录 → TC-02 缺证据被拦（TC-03 手动不核对）
+  cat > "$REPORTS/TEST-a.xml" <<'EOF'
+<?xml version="1.0"?>
+<testsuite tests="1"><testcase classname="T" name="test_TC01_ok"/></testsuite>
+EOF
+  run bash "$SCRIPTS_DIR/test-cases-check.sh" --evidence "$CHANGE" "$REPORTS"
   [ "$status" -eq 2 ]
-  grep -q '已设计' <<<"$output"
+  grep -q 'MISSING_CASE: TC-02' <<<"$output"
+
+  # 补上 TC-02 但让它失败 → 失败拦截
+  cat > "$REPORTS/TEST-a.xml" <<'EOF'
+<?xml version="1.0"?>
+<testsuite tests="2">
+  <testcase classname="T" name="test_TC01_ok"/>
+  <testcase classname="T" name="test_TC02_bad"><failure message="boom"/></testcase>
+</testsuite>
+EOF
+  run bash "$SCRIPTS_DIR/test-cases-check.sh" --evidence "$CHANGE" "$REPORTS"
+  [ "$status" -eq 2 ]
+  grep -q 'FAILED_TEST' <<<"$output"
+
+  # 全绿 → 通过；手动用例 TC-03 无需报告
+  cat > "$REPORTS/TEST-a.xml" <<'EOF'
+<?xml version="1.0"?>
+<testsuite tests="2">
+  <testcase classname="T" name="test_TC01_ok"/>
+  <testcase classname="T" name="test_TC02_ok"/>
+</testsuite>
+EOF
+  run bash "$SCRIPTS_DIR/test-cases-check.sh" --evidence "$CHANGE" "$REPORTS"
+  [ "$status" -eq 0 ]
+}
+
+@test "--evidence 无报告目录时明确拦截" {
+  run bash "$SCRIPTS_DIR/test-cases-check.sh" --evidence "$CHANGE" "$BATS_TEST_TMPDIR/no-such"
+  [ "$status" -eq 2 ]
+  grep -q 'JUnit' <<<"$output"
 }
 
 @test "impact-check 检出缺失的影响范围字段" {

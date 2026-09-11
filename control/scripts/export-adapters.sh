@@ -125,7 +125,7 @@ skills = {
 bash .ai-control/control/scripts/ai-dev.sh feature $ARGUMENTS
 ```
 
-3. 按产品规格工程师（agent-spec）手册完善 proposal/design/tasks。
+3. 按产品规格工程师（agent-spec）手册完善 proposal/tasks（design 仅在跨模块/数据库/接口兼容时创建）。
 4. 按测试工程师（agent-test）手册设计 test-cases.md 验收用例。
 5. 输出待确认问题清单，等待用户确认后才能进入实现。
 """,
@@ -147,11 +147,11 @@ bash .ai-control/control/scripts/ai-dev.sh ready $ARGUMENTS
 
 ```bash
 OPENSPEC_CHANGE_ID=$ARGUMENTS bash .ai-control/control/scripts/run-tests.sh
-bash .ai-control/control/scripts/test-cases-check.sh --require-filled openspec/changes/$ARGUMENTS
-bash .ai-control/control/scripts/ai-dev.sh review
+./ai ship $ARGUMENTS
 ```
 
-然后按发布审查工程师（agent-release）手册逐项过必查项。
+ship 门禁：JUnit 证据核对 + 规格防漂移（秒级）。高风险变更（碰 DB/权限/支付）建议 `./ai ship $ARGUMENTS --review` 做独立二审。
+然后按发布审查工程师（agent-release）手册逐项过必查项（只过与本次变更相关的项）。
 """,
     ),
 }

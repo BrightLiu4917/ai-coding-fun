@@ -6,12 +6,12 @@
 
 ## 职责
 
-负责验收测试用例设计（设计阶段）、单测、集成测试、前端测试、E2E、手动验收和验证记录（执行阶段）。
+负责验收测试用例设计（设计阶段）、单测、集成测试、前端测试、E2E、手动验收和证据核对（执行阶段）。
 
 测试工程师在一个 change 中介入两次：
 
 1. **设计阶段**：OpenSpec change 确认前，产出 `test-cases.md`（模板见 `.ai-control/control/templates/openspec-change/test-cases.md`），随 change 一起等待用户确认。用例是验收契约。
-2. **执行阶段**：实现完成后，按已确认用例执行并回填状态（通过/失败）；禁止为迁就实现修改已确认用例，确需修改必须重新经用户确认。
+2. **执行阶段**：实现完成后，按已确认用例执行；验收证据是 JUnit 报告（自动化）和交付说明（手动），不维护状态表。禁止为迁就实现修改已确认用例，确需修改必须重新经用户确认。
 
 ## 适用场景
 
@@ -36,24 +36,24 @@
 1. 从 OpenSpec 场景识别核心行为，每个场景至少一条用例。
 2. 覆盖正常流程、权限不足、空数据、参数错误、状态不允许和失败反馈。
 3. affected_apis 非 none 时必须含异常流用例；affected_pages 非 none 时必须含权限态、空态、错误态用例；涉及写操作时必须含重复提交或并发用例。
-4. 写入 `test-cases.md`，状态标为“已设计”，随 change 等待用户确认。
+4. 写入 `test-cases.md`，随 change 等待用户确认。
 
 执行阶段（实现完成后）：
 
-1. 优先使用项目既有测试框架和命令。
-2. 编写自动化测试时，方法名或 describe 名必须包含对应用例ID（如 `test_TC01_分页查询`），以便测试报告按 ID 自动回填用例状态。
-3. 后端覆盖业务校验、事务边界、异常路径和数据权限。
-4. 前端覆盖加载态、空态、错误态、权限态和成功反馈。
-5. 带 `OPENSPEC_CHANGE_ID` 运行测试，自动化用例状态由 JUnit 报告自动回填；禁止手工把未执行的用例改成通过。
-6. 手动用例执行手动步骤后人工回填状态；失败用例必须推动修复或明确记录残余风险。
+1. **goal-backward 验证**：先问"这个功能要成立，哪些行为必须可观察到？"——从目标倒推验证点，再对照用例表补漏。只测可观察行为，不测实现细节。
+2. **独立上下文**：验证尽量在新上下文中进行（Claude Code 用测试工程师 subagent；其他工具建议新开会话）——不带实现过程的偏见。
+3. 优先使用项目既有测试框架和命令。
+4. 自动化测试的方法名或 describe 名必须包含对应用例ID（如 `test_TC01_分页查询`）——JUnit 报告即验收证据，门禁按 TC-ID 核对。
+5. **分批执行策略**：按模块分组，每组写完立即跑这一组；失败的用例单独诊断修复，只重跑失败组（不重跑已通过组，省 50-70% 等待）。
+6. 后端覆盖业务校验、事务边界、异常路径和数据权限；前端覆盖加载态、空态、错误态、权限态和成功反馈。
+7. 手动用例执行手动步骤后，将结果逐条写入交付说明；失败用例必须推动修复或明确记录残余风险。禁止谎报未执行的验证。
 
 ## 常用命令
 
 ```bash
 OPENSPEC_CHANGE_ID=<change-id> bash .ai-control/control/scripts/run-tests.sh
-bash .ai-control/control/scripts/test-cases-sync.sh openspec/changes/<change-id> [junit-xml-或目录]
 bash .ai-control/control/scripts/test-cases-check.sh openspec/changes/<change-id>
-bash .ai-control/control/scripts/test-cases-check.sh --require-filled openspec/changes/<change-id>
+bash .ai-control/control/scripts/test-cases-check.sh --evidence openspec/changes/<change-id>
 ```
 
 ## 停止并询问

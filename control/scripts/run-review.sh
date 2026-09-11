@@ -52,6 +52,8 @@ REVIEW_API_KEY="${REVIEW_API_KEY:-${DEEPV4_API_KEY:-}}"
 REVIEW_MODEL="${REVIEW_MODEL:-${DEEPV4_MODEL:-}}"
 REVIEW_COMMAND="${REVIEW_COMMAND:-${DEEPV4_REVIEW_COMMAND:-}}"
 REVIEW_MODE="${REVIEW_MODE:-auto}"
+# 主动触发（ai ship --review）优先于任何模式配置：无条件执行
+[[ "${REVIEW_FORCED:-0}" == "1" ]] && REVIEW_MODE="always"
 REVIEW_PROVIDER="${REVIEW_PROVIDER:-openai-compatible}"
 export REVIEW_BASE_URL REVIEW_API_KEY REVIEW_MODEL
 
@@ -123,7 +125,7 @@ printf 'REVIEW_RUNNING: %s\n' "$REVIEW_COMMAND"
 cd "$PROJECT_ROOT"
 if ! bash -c "$REVIEW_COMMAND \"\$1\"" review-runner "$INPUT_FILE" | tee "$OUTPUT_FILE"; then
   echo "REVIEW_FAILED: 审查命令执行失败（详见上方错误）。" >&2
-  echo "  - 确需跳过本次二审时使用: ai ship <change-id> --skip-review \"原因\"" >&2
+  echo "  - 二审默认不阻塞交付；修复端点配置后可重跑 ai ship <change-id> --review" >&2
   exit 2
 fi
 
@@ -131,7 +133,7 @@ fi
 verdict="$(grep -Eo 'VERDICT:[[:space:]]*(PASS_WITH_RISKS|PASS|BLOCK)' "$OUTPUT_FILE" | tail -1 | sed 's/VERDICT:[[:space:]]*//' || true)"
 case "$verdict" in
   BLOCK)
-    printf 'REVIEW_VERDICT=BLOCK：存在阻塞问题，禁止交付；修复后重跑，或用 --skip-review 显式跳过并留痕。\n'
+    printf 'REVIEW_VERDICT=BLOCK：存在阻塞问题，禁止交付；修复后重跑 ai ship <id> --review。\n'
     exit 2
     ;;
   PASS_WITH_RISKS)
